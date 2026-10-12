@@ -1,9 +1,6 @@
-// Packs dist/ into out/hidden-fields-<version>.zip. Fixed timestamps and sorted entries keep the zip reproducible.
+// Packs dist/ into out/hidden-fields-<version>.zip; buildZip keeps the bytes reproducible.
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { zipSync } from 'fflate';
-import { checkPackage, type ZipEntry } from './package-lib.ts';
-
-const FIXED_MTIME = new Date('2000-01-01T00:00:00Z');
+import { buildZip, checkPackage, type ZipEntry } from './package-lib.ts';
 
 const manifest = JSON.parse(readFileSync('src/manifest.json', 'utf8')) as { name: string; version: string };
 const backendNames = readdirSync('src/backend')
@@ -21,10 +18,7 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-const zip = zipSync(Object.fromEntries(entries.map((entry) => [entry.name, [entry.content, { mtime: FIXED_MTIME }]])), {
-  level: 9,
-});
 mkdirSync('out', { recursive: true });
 const target = `out/${manifest.name}-${manifest.version}.zip`;
-writeFileSync(target, zip);
+writeFileSync(target, buildZip(entries));
 console.log(target);

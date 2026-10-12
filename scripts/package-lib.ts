@@ -1,3 +1,5 @@
+import { zipSync } from 'fflate';
+
 /** A file inside the app zip. `name` is its path inside the zip. */
 export interface ZipEntry {
   name: string;
@@ -27,4 +29,15 @@ export function checkPackage(entries: ZipEntry[], backendNames: string[]): strin
     if (found !== 1) problems.push(`${entry.name} must export exactly one of httpHandler or aiTool (found ${found})`);
   }
   return problems;
+}
+
+/**
+ * Zips the entries with sorted names and a fixed timestamp, so the same files give the same bytes on any machine.
+ * Zip timestamps hold local calendar fields, so the date is built from local fields at call time: it reads
+ * 2000-01-01 00:00 in every time zone.
+ */
+export function buildZip(entries: ZipEntry[]): Uint8Array {
+  const mtime = new Date(2000, 0, 1, 0, 0, 0);
+  const sorted = [...entries].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  return zipSync(Object.fromEntries(sorted.map((entry) => [entry.name, [entry.content, { mtime }]])), { level: 9 });
 }

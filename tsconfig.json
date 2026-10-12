@@ -1,0 +1,10 @@
+{
+  "extends": "@jetbrains/youtrack-workflow-types/tsconfig",
+  "compilerOptions": {
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src/**/*.ts"]
+}

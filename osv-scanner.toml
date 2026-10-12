@@ -1,0 +1,6 @@
+# Advisories osv-scanner may ignore. Every entry needs a reason and expires, so it gets re-checked.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-04-12T00:00:00Z
+reason = "braces <=3.0.3 has no fixed release; it comes only through @jetbrains/youtrack-apps-tools, a dev-only CLI that expands our own glob patterns. Nothing in the app zip depends on it."

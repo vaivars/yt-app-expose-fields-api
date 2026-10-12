@@ -1,0 +1,26 @@
+{
+  "name": "hidden-fields",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "YouTrack app that serves custom fields hidden from the YouTrack UI through REST and MCP",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vaivars/yt-app-expose-fields-api.git"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@jetbrains/youtrack-apps-tools": "1.0.3",
+    "@jetbrains/youtrack-workflow-types": "2026.2.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/node": "24.19.2",
+    "fflate": "0.8.3",
+    "typescript": "7.0.2",
+    "vite": "6.4.4",
+    "vitest": "5.0.4"
+  }
+}

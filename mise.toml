@@ -1,0 +1,11 @@
+min_version = "2026.10.6"
+
+[env]
+_.path = ["node_modules/.bin"]
+
+[tools]
+node = "24.21.0"
+hk = "2.5.0"
+pkl = "0.32.1"
+usage = "6.12.1"
+jactionlint = "2.1.0"

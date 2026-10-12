@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Hidden Fields API",
+  "properties": {
+    "exposedFields": {
+      "type": "string",
+      "title": "Exposed fields",
+      "description": "Names of the hidden custom fields to expose, separated by commas. Put a name that contains a comma in double quotes, for example: External ID, \"Fix versions, legacy\"",
+      "x-scope": "GLOBAL"
+    },
+    "serviceToken": {
+      "type": "string",
+      "format": "secret",
+      "title": "Technical user token",
+      "description": "Permanent token of the technical user that can see the hidden fields. It needs read access to the issues, plus Update Issue if callers should update exposed fields. Never use an administrator.",
+      "x-scope": "GLOBAL"
+    },
+    "allowedGroup": {
+      "type": "string",
+      "title": "Allowed group",
+      "description": "Optional. Name of a group; when set, only its members can read and update the exposed fields. If no group has this name, nobody can.",
+      "x-scope": "GLOBAL"
+    },
+    "youtrackUrl": {
+      "type": "string",
+      "title": "YouTrack base URL",
+      "description": "Optional. The URL the app uses to call the YouTrack REST API. Leave empty to use the URL from issue links.",
+      "x-scope": "GLOBAL"
+    }
+  },
+  "required": ["exposedFields", "serviceToken"]
+}

@@ -1,0 +1,19 @@
+# Local YouTrack for the contract tests. Start it with `mise run yt:up` (see test/contract/README.md).
+# YT_IMAGE overrides the image and YT_PORT the host port.
+services:
+  youtrack:
+    image: ${YT_IMAGE:-jetbrains/youtrack:2026.2.19580@sha256:97c99c3e13061122923d0dea7c76a488c44787ca2dac084058f9d9acc96722de}
+    ports:
+      # Local only: the test instance has known passwords and tokens.
+      - "127.0.0.1:${YT_PORT:-8080}:8080"
+    volumes:
+      - data:/opt/youtrack/data
+      - conf:/opt/youtrack/conf
+      - logs:/opt/youtrack/logs
+      - backups:/opt/youtrack/backups
+
+volumes:
+  data:
+  conf:
+  logs:
+  backups:

@@ -1,0 +1,63 @@
+amends "package://github.com/jdx/hk/releases/download/v2.5.0/hk@2.5.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v2.5.0/hk@2.5.0#/Builtins.pkl"
+
+local generated = List("package-lock.json", "mise.lock", "CHANGELOG.md")
+
+local linters = new Mapping<String, Step> {
+  ["biome"] {
+    glob = List("**/*.ts", "**/*.js", "**/*.mjs", "**/*.json")
+    exclude = generated
+    batch = true
+    check = new CommandSpec {
+      command = "biome check --no-errors-on-unmatched {{ files }}"
+      effect = "read"
+    }
+    fix = new CommandSpec {
+      command = "biome check --write --no-errors-on-unmatched {{ files }}"
+      effect = "write"
+    }
+  }
+  ["pkl"] = Builtins.pkl
+  ["jactionlint"] {
+    glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
+    batch = true
+    check = new CommandSpec {
+      command = "jactionlint {{ files }}"
+      effect = "read"
+    }
+  }
+  ["newlines"] = (Builtins.newlines) {
+    exclude = generated
+  }
+  // trailing double spaces are markdown line breaks
+  ["trailing-whitespace"] = (Builtins.trailing_whitespace) {
+    exclude = generated + List("**/*.md")
+  }
+}
+
+fail_fast = false
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps = linters
+  }
+  ["pre-push"] {
+    steps {
+      ["check-authors"] {
+        check = new CommandSpec {
+          command = "mise run check-authors"
+          effect = "read"
+        }
+      }
+    }
+  }
+  ["fix"] {
+    fix = true
+    steps = linters
+  }
+  ["check"] {
+    steps = linters
+  }
+}

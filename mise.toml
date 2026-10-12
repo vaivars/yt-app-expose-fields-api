@@ -9,3 +9,84 @@ hk = "2.5.0"
 pkl = "0.32.1"
 usage = "6.12.1"
 jactionlint = "2.1.0"
+osv-scanner = "2.6.0"
+
+[tasks.install]
+description = "Install npm dependencies from the lockfile"
+run = "npm ci"
+sources = ["package.json", "package-lock.json"]
+outputs = ["node_modules/.package-lock.json"]
+
+[tasks.build]
+description = "Bundle the app into dist/"
+depends = ["install"]
+run = "node scripts/build.ts"
+
+[tasks.typecheck]
+description = "Type-check the app, scripts and tests"
+depends = ["install"]
+run = ["tsc -p tsconfig.json", "tsc -p tsconfig.node.json"]
+
+[tasks.test]
+description = "Run the unit tests"
+depends = ["install"]
+run = "vitest run"
+
+[tasks.validate]
+description = "Validate dist/manifest.json against the YouTrack app schema"
+depends = ["build"]
+run = "youtrack-app app validate --directory dist"
+
+[tasks.package]
+description = "Check the app layout and zip it into out/"
+depends = ["validate"]
+run = "node scripts/package.ts"
+
+[tasks.lint]
+description = "Run all linters (see hk.pkl)"
+depends = ["install"]
+run = "hk check --all"
+
+[tasks.lint-fix]
+description = "Run all linters and apply fixes"
+depends = ["install"]
+run = "hk fix --all"
+
+[tasks.audit]
+description = "Check dependencies for known advisories (osv-scanner.toml) and registry signatures"
+depends = ["install"]
+run = ["osv-scanner scan source --lockfile package-lock.json", "npm audit signatures"]
+
+[tasks.ci]
+description = "Run everything CI runs"
+depends = ["lint", "typecheck", "test", "audit", "package"]
+
+[tasks.deploy-local]
+description = "Upload dist/ to YOUTRACK_HOST with YOUTRACK_TOKEN"
+depends = ["build"]
+run = "youtrack-app app upload --directory dist"
+
+[tasks.check-authors]
+description = "Fail if an unpushed commit has an author or committer other than CHECK_AUTHORS_EMAIL"
+run = "scripts/check-authors.sh"
+
+[tasks."yt:up"]
+description = "Start the local YouTrack (compose.yaml; data in named volumes)"
+run = "scripts/yt.sh up"
+
+[tasks."yt:down"]
+description = "Stop the local YouTrack (keeps its volumes)"
+run = "scripts/yt.sh down"
+
+[tasks."yt:logs"]
+description = "Show the local YouTrack logs"
+run = "scripts/yt.sh logs"
+
+[tasks."yt:reset"]
+description = "Stop the local YouTrack and delete its volumes"
+run = "scripts/yt.sh reset"
+
+[tasks.test-contract]
+description = "Run the contract tests against YT_CONTRACT_URL (see test/contract/README.md)"
+depends = ["build"]
+run = "vitest run --config vitest.contract.config.ts"

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/youtrack-app.json",
+  "name": "hidden-fields",
+  "title": "Hidden Fields API",
+  "description": "Reads and updates custom fields that are hidden from the YouTrack UI, through REST endpoints and MCP tools.",
+  "version": "0.0.0",
+  "url": "https://github.com/vaivars/yt-app-expose-fields-api",
+  "vendor": {
+    "name": "Klavs Dzelzs-Vaivars",
+    "url": "https://github.com/vaivars"
+  },
+  "icon": "icon.svg",
+  "minYouTrackVersion": "2025.3.0",
+  "aiToolPrefix": "hidden_fields"
+}

@@ -1,0 +1,135 @@
+name: release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+      dry_run:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build and upload to, e.g. v0.0.1"
+        required: true
+      dry_run:
+        description: "Build and package only; keep the zip as a workflow artifact"
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ inputs.tag }}
+
+jobs:
+  # Builds and tests with the npm toolchain, read-only. The jobs that hold release permissions install nothing.
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Refuse uploads from branches other than main
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::A run that uploads to a release must be started from main."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # A run that uploads builds the tag, never the branch it was started from.
+          ref: ${{ !inputs.dry_run && format('refs/tags/{0}', inputs.tag) || github.ref }}
+      - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
+        with:
+          version: 2026.10.6
+          # No cache in a release build: a poisoned cache entry must not reach release artifacts.
+          cache: false
+      # Lint and audit run in CI before merge; a fresh advisory must not block a merged release.
+      - run: mise run test
+      - run: mise run package
+      - name: Check that the tag matches the versions
+        if: ${{ !inputs.dry_run }}
+        run: |
+          package=$(jq -r .version package.json)
+          manifest=$(jq -r .version src/manifest.json)
+          if [ "$TAG" != "v$package" ] || [ "$TAG" != "v$manifest" ]; then
+            echo "::error::tag $TAG does not match package.json $package and manifest $manifest"
+            exit 1
+          fi
+      - name: Write checksums
+        run: |
+          cd out
+          sha256sum -- *.zip > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: out
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    needs: [build]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: out
+      - name: Verify checksums
+        run: |
+          cd out
+          sha256sum -c SHA256SUMS
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: out/hidden-fields-*.zip
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Needed only for manual runs; release-please creates the release before calling this workflow.
+          for _ in $(seq 1 30); do gh release view "$TAG" > /dev/null 2>&1 && break; sleep 10; done
+          gh release upload "$TAG" out/*.zip out/SHA256SUMS --clobber
+
+  marketplace:
+    name: marketplace
+    needs: [publish]
+    # Inert until the first version was listed by hand and MARKETPLACE_PLUGIN_ID is set.
+    if: ${{ !inputs.dry_run && vars.MARKETPLACE_PLUGIN_ID != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: marketplace
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+          path: out
+      - name: Upload to JetBrains Marketplace
+        env:
+          MARKETPLACE_TOKEN: ${{ secrets.MARKETPLACE_TOKEN }}
+          PLUGIN_ID: ${{ vars.MARKETPLACE_PLUGIN_ID }}
+        run: |
+          if [ -z "$MARKETPLACE_TOKEN" ]; then
+            echo "::notice::MARKETPLACE_TOKEN is not set, so the Marketplace upload is skipped"
+            exit 0
+          fi
+          zip=$(ls out/hidden-fields-*.zip)
+          curl --fail-with-body -sS -H "Authorization: Bearer $MARKETPLACE_TOKEN" \
+            -F "pluginId=$PLUGIN_ID" -F "file=@$zip" https://plugins.jetbrains.com/api/updates/upload

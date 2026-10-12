@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkPackage, type ZipEntry } from '../../scripts/package-lib.ts';
+import { buildZip, checkPackage, type ZipEntry } from '../../scripts/package-lib.ts';
 
 const text = (value: string): Uint8Array => new TextEncoder().encode(value);
 const statics: ZipEntry[] = [
@@ -40,5 +40,23 @@ describe('checkPackage', () => {
       'a.js must export exactly one of httpHandler or aiTool (found 0)',
       'b.js must export exactly one of httpHandler or aiTool (found 2)',
     ]);
+  });
+});
+
+describe('buildZip', () => {
+  it('produces the same bytes in every time zone', () => {
+    const original = process.env.TZ;
+    const zipIn = (timeZone: string): Buffer => {
+      process.env.TZ = timeZone;
+      return Buffer.from(buildZip(statics));
+    };
+    try {
+      const utc = zipIn('UTC');
+      expect(zipIn('Pacific/Kiritimati').equals(utc)).toBe(true);
+      expect(zipIn('America/Los_Angeles').equals(utc)).toBe(true);
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
   });
 });

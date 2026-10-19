@@ -77,7 +77,13 @@ Add `full=true` to get every attribute YouTrack returns: field ids and types, re
 {"idReadable":"ABC-1","customFields":[{"name":"Priority",…},{"name":"LLM Session",…}],"$type":"Issue"}
 ```
 
-A field you aren't allowed to get stays absent, even when you name it. Matching ignores case and surrounding spaces. YouTrack itself checks the `fields` syntax, so a name with parentheses can't be passed over REST; use MCP for those.
+Names that don't come back are listed in `missing`, as you wrote them, and the key appears only when something is missing:
+
+```json
+{"idReadable":"ABC-1","customFields":[{"name":"Priority",…}],"missing":["LLM Sesion"],"$type":"Issue"}
+```
+
+`missing` doesn't say why a field is absent: a field that doesn't exist and a field you aren't allowed to get look the same, so the answer doesn't reveal hidden fields. Matching ignores case and surrounding spaces. YouTrack itself checks the `fields` syntax, so a name with parentheses can't be passed over REST; use MCP for those.
 
 Entries come in YouTrack's field order as the technical user sees it, which can differ slightly from your own calls. Match entries by `name`, not by position.
 

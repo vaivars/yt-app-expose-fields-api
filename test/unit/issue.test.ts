@@ -118,9 +118,35 @@ describe('getIssue', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('lists the requested names it did not return, as given, without saying why', () => {
+    const { input } = readInput({ names: [' Priority ', 'Typo', 'TYPO', 'Internal Note'] });
+    expect(getIssue(input).body).toEqual({
+      idReadable: 'ABC-1',
+      customFields: [PRIORITY],
+      missing: ['Typo', 'Internal Note'],
+      $type: 'Issue',
+    });
+  });
+
+  it('lists a wanted field the technical user cannot read as missing', () => {
+    const { input, warnings } = readInput({ names: ['External ID'] }, youTrack({ fields: [PRIORITY] }));
+    expect(getIssue(input).body).toEqual({
+      idReadable: 'ABC-1',
+      customFields: [],
+      missing: ['External ID'],
+      $type: 'Issue',
+    });
+    expect(warnings).toEqual(['Field "External ID" exists in the project but the technical user cannot read it']);
+  });
+
   it('never returns a named field that is neither readable nor exposed', () => {
     const { input } = readInput({ names: ['Internal Note', 'State'] });
-    expect(getIssue(input).body).toEqual({ idReadable: 'ABC-1', customFields: [STATE], $type: 'Issue' });
+    expect(getIssue(input).body).toEqual({
+      idReadable: 'ABC-1',
+      customFields: [STATE],
+      missing: ['Internal Note'],
+      $type: 'Issue',
+    });
   });
 
   it('treats blank names as no filter', () => {

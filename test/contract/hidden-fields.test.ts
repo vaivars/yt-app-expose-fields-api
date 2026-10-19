@@ -75,13 +75,14 @@ describe('get_issue over REST', () => {
     same(customFields, await techEntries((name) => readable.has(name) || EXPOSED.has(name), FULL_PROJECTION));
   });
 
-  it('returns only the named fields, normal or exposed, never an unexposed hidden one', async () => {
-    const names = encodeURIComponent(`HF External ID,priority,${env.unexposed}`);
+  it('returns only the named fields, and lists an unexposed hidden one like a field that does not exist', async () => {
+    const names = encodeURIComponent(`HF External ID,priority,${env.unexposed},No Such Field`);
     const { status, body } = await get<IssueBody>(env.userToken, `${APP}?fields=${names}`);
     expect(status).toBe(200);
     same(body, {
       idReadable: env.issue,
       customFields: await techEntries((name) => name === 'Priority' || name === 'HF External ID'),
+      missing: [env.unexposed, 'No Such Field'],
       $type: 'Issue',
     });
   });
@@ -250,12 +251,13 @@ describe('allowed group', () => {
 
 describe('MCP', () => {
   it('get_issue matches the REST endpoint, with and without fields and full', async () => {
-    const names = encodeURIComponent(`State,${WRITABLE}`);
+    const names = encodeURIComponent(`State,${WRITABLE},No Such Field`);
+    const list = ['State', WRITABLE, 'No Such Field'];
     const cases: [Record<string, unknown>, string][] = [
       [{}, ''],
-      [{ fields: ['State', WRITABLE] }, `?fields=${names}`],
+      [{ fields: list }, `?fields=${names}`],
       [{ full: true }, '?full=true'],
-      [{ fields: ['State', WRITABLE], full: true }, `?fields=${names}&full=true`],
+      [{ fields: list, full: true }, `?fields=${names}&full=true`],
     ];
     for (const [args, query] of cases) {
       same(

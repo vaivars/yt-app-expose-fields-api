@@ -1,6 +1,6 @@
 import type { Issue, User } from '@jetbrains/youtrack-scripting-api/entities';
 import { readInput, updateInput } from '../adapters/youtrack';
-import { parseNames } from '../core/config';
+import { listNames } from '../core/config';
 import { getIssue, updateIssue } from '../core/issue';
 import type { AppSettings, Result } from '../core/types';
 
@@ -79,7 +79,7 @@ export const httpHandler = {
       handle(ctx: IssueRequestContext): void {
         if (!visible(ctx)) return;
         const fields = ctx.request.getParameter('fields');
-        const names = fields ? [...parseNames(fields)] : null;
+        const names = fields ? listNames(fields) : null;
         respond(ctx, getIssue(readInput(ctx.issue, ctx.currentUser, ctx.settings, names, full(ctx))));
       },
     },

@@ -63,6 +63,12 @@ describe('MCP tools', () => {
     const expected = { idReadable: 'ABC-1', customFields: [EXTERNAL_ID], $type: 'Issue' };
     expect(getIssueTool.execute(context({ issueId: 'ABC-1', fields: ['External ID', 42] }))).toEqual(expected);
     expect(getIssueTool.execute(context({ issueId: 'ABC-1', fields: 'external id' }))).toEqual(expected);
+    expect(getIssueTool.execute(context({ issueId: 'ABC-1', fields: 'external id, Typo' }))).toEqual({
+      idReadable: 'ABC-1',
+      customFields: [EXTERNAL_ID],
+      missing: ['Typo'],
+      $type: 'Issue',
+    });
   });
 
   it('update_issue writes an exposed field, and clears it only with clear: true', () => {

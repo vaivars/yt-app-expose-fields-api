@@ -6,7 +6,8 @@ import { callYouTrack, issuePath, type Upstream, upstreamError } from './upstrea
 
 /**
  * get_issue: the ticket in YouTrack's REST shape with every custom field the caller can read plus the exposed ones,
- * or, when names are requested, only those fields. Compact unless `full` is set.
+ * or, when names are requested, only those fields. Compact unless `full` is set. Requested names it doesn't return are
+ * listed in `missing`, without saying why, so a hidden field looks the same as one that doesn't exist.
  */
 export function getIssue(input: ReadInput): Result {
   const upstream = upstreamFor(input);
@@ -34,7 +35,11 @@ export function getIssue(input: ReadInput): Result {
     }
   }
 
-  if (only !== null) return issueBody({ idReadable: input.issueId }, kept);
+  if (only !== null) {
+    const found = new Set(kept.map((entry) => normalizeName(entryName(entry))));
+    const missing = [...only].filter(([key]) => !found.has(key)).map(([, name]) => name);
+    return issueBody({ idReadable: input.issueId }, kept, missing);
+  }
 
   const base = callYouTrack(upstream, {
     method: 'GET',
@@ -107,16 +112,28 @@ function fetchFields(upstream: Upstream, issueId: string, fields: string): Custo
   return response.json as CustomFieldEntry[];
 }
 
-/** YouTrack's issue shape: the given attributes, then `customFields`, then `$type`. */
-function issueBody(attributes: IssueObject, customFields: CustomFieldEntry[]): Result {
+/** YouTrack's issue shape: the given attributes, then `customFields`, then `missing` if any, then `$type`. */
+function issueBody(attributes: IssueObject, customFields: CustomFieldEntry[], missing: string[] = []): Result {
   const { $type, ...rest } = attributes;
-  return { status: 200, body: { ...rest, customFields, $type: typeof $type === 'string' ? $type : 'Issue' } };
+  return {
+    status: 200,
+    body: {
+      ...rest,
+      customFields,
+      ...(missing.length > 0 ? { missing } : {}),
+      $type: typeof $type === 'string' ? $type : 'Issue',
+    },
+  };
 }
 
-/** The normalized requested names, or null when the caller asked for every field. */
-function requestedNames(names: string[] | null | undefined): Set<string> | null {
-  const normalized = (names ?? []).map(normalizeName).filter((name) => name.length > 0);
-  return normalized.length > 0 ? new Set(normalized) : null;
+/** The requested names by normalized name, as given (trimmed), or null when the caller asked for every field. */
+function requestedNames(names: string[] | null | undefined): Map<string, string> | null {
+  const requested = new Map<string, string>();
+  for (const name of names ?? []) {
+    const key = normalizeName(name);
+    if (key && !requested.has(key)) requested.set(key, name.trim());
+  }
+  return requested.size > 0 ? requested : null;
 }
 
 function readable(input: ReadInput, name: string): boolean {

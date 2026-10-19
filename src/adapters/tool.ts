@@ -1,5 +1,5 @@
 import { Issue, type User } from '@jetbrains/youtrack-scripting-api/entities';
-import { parseNames } from '../core/config';
+import { listNames } from '../core/config';
 import type { AppSettings, ErrorBody, IssueObject, Result } from '../core/types';
 
 /** The parts of YouTrack's AI tool context the tools use. */
@@ -20,7 +20,7 @@ export function visibleIssue(ctx: ToolContext): Issue {
 /** Field names from a list or a comma-separated string; null when none were given. */
 export function namesArgument(value: unknown): string[] | null {
   if (Array.isArray(value)) return value.filter((name): name is string => typeof name === 'string');
-  if (typeof value === 'string') return [...parseNames(value)];
+  if (typeof value === 'string') return listNames(value);
   return null;
 }
 

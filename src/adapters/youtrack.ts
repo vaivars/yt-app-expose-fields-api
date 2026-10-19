@@ -12,14 +12,20 @@ export function connect(baseUrl: string): HttpConnectionLike {
 /** Messages land in the app's log (Administration → Apps → Hidden Fields API → Logs). */
 const appLog = { info: (message: string) => console.log(message), warn: (message: string) => console.warn(message) };
 
-function issueContext(issue: Issue, user: User, settings: AppSettings): IssueContext {
-  return { issueId: issue.id, issueUrl: issue.url, settings, user, connect };
+function issueContext(issue: Issue, user: User, settings: AppSettings, full: boolean): IssueContext {
+  return { issueId: issue.id, issueUrl: issue.url, settings, user, connect, full };
 }
 
 /** Input for get_issue; the readability check runs as the calling user. */
-export function readInput(issue: Issue, user: User, settings: AppSettings, names: string[] | null): ReadInput {
+export function readInput(
+  issue: Issue,
+  user: User,
+  settings: AppSettings,
+  names: string[] | null,
+  full: boolean,
+): ReadInput {
   return {
-    ...issueContext(issue, user, settings),
+    ...issueContext(issue, user, settings, full),
     names,
     canRead: (fieldName) => issue.fields.canBeReadBy(fieldName, user),
     projectFieldNames: () => {
@@ -40,9 +46,10 @@ export function updateInput(
   settings: AppSettings,
   field: unknown,
   value: unknown,
+  full: boolean,
 ): UpdateInput {
   return {
-    ...issueContext(issue, user, settings),
+    ...issueContext(issue, user, settings, full),
     actor: user.login,
     field,
     value,

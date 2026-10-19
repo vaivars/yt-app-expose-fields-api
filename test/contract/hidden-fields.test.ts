@@ -1,5 +1,10 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { FULL_PROJECTION, ISSUE_PROJECTION } from '../../src/core/projection';
+import {
+  COMPACT_ISSUE_PROJECTION,
+  COMPACT_PROJECTION,
+  FULL_PROJECTION,
+  ISSUE_PROJECTION,
+} from '../../src/core/projection';
 import { appLogs, appSettings, callTool, callToolRaw, type Entry, get, post, restoreStringField } from './client.ts';
 import { contractEnv as env } from './env.ts';
 
@@ -22,9 +27,9 @@ function byName(entries: Entry[]): [string, string][] {
   return entries.map((entry): [string, string] => [String(entry.name), JSON.stringify(entry)]).sort();
 }
 
-/** The technical user's full entries, kept by name. */
-async function techEntries(keep: (name: string) => boolean): Promise<Entry[]> {
-  const { body } = await get<Entry[]>(env.techToken, `${ISSUE}/customFields?$top=-1`, FULL_PROJECTION);
+/** The technical user's entries in the given projection (compact by default), kept by name. */
+async function techEntries(keep: (name: string) => boolean, projection = COMPACT_PROJECTION): Promise<Entry[]> {
+  const { body } = await get<Entry[]>(env.techToken, `${ISSUE}/customFields?$top=-1`, projection);
   return body.filter((entry) => keep(String(entry.name)));
 }
 
@@ -50,14 +55,24 @@ describe('premise', () => {
 });
 
 describe('get_issue over REST', () => {
-  it("returns the user's own issue attributes plus their fields and the exposed ones", async () => {
+  it("returns the user's own issue attributes plus their fields and the exposed ones, compact", async () => {
     const readable = await userFieldNames();
     const actual = await get<IssueBody>(env.userToken, APP);
     expect(actual.status).toBe(200);
     const { customFields, ...attributes } = actual.body;
-    const own = await get<Record<string, unknown>>(env.userToken, ISSUE, ISSUE_PROJECTION);
+    const own = await get<Record<string, unknown>>(env.userToken, ISSUE, COMPACT_ISSUE_PROJECTION);
     same(attributes, own.body);
     same(customFields, await techEntries((name) => readable.has(name) || EXPOSED.has(name)));
+  });
+
+  it("returns YouTrack's full output with full=true", async () => {
+    const readable = await userFieldNames();
+    const actual = await get<IssueBody>(env.userToken, `${APP}?full=true`);
+    expect(actual.status).toBe(200);
+    const { customFields, ...attributes } = actual.body;
+    const own = await get<Record<string, unknown>>(env.userToken, ISSUE, ISSUE_PROJECTION);
+    same(attributes, own.body);
+    same(customFields, await techEntries((name) => readable.has(name) || EXPOSED.has(name), FULL_PROJECTION));
   });
 
   it('returns only the named fields, normal or exposed, never an unexposed hidden one', async () => {
@@ -74,6 +89,7 @@ describe('get_issue over REST', () => {
   it('never returns the unexposed hidden field, even for projection-like input', async () => {
     for (const query of [
       '',
+      '?full=true',
       '?fields=projectCustomField(project(issues(idReadable,customFields(name,value(name)))))',
     ]) {
       const { status, body } = await get<IssueBody>(env.userToken, `${APP}${query}`);
@@ -84,10 +100,10 @@ describe('get_issue over REST', () => {
 });
 
 describe('update_issue over REST', () => {
-  it('sets an exposed field as the technical user and returns its fresh entry', async () => {
+  it('sets an exposed field as the technical user and returns a short status', async () => {
     const { status, body } = await post<IssueBody>(env.userToken, APP, { field: WRITABLE, value: 'CONTRACT-1' });
     expect(status).toBe(200);
-    same(body, { idReadable: env.issue, customFields: await techEntries((name) => name === WRITABLE), $type: 'Issue' });
+    same(body, { idReadable: env.issue, field: WRITABLE, status: 'updated' });
     expect(await techValue(WRITABLE)).toBe('CONTRACT-1');
     const history = await get<{ author: { login: string }; field: { presentation: string }; added: unknown }[]>(
       env.techToken,
@@ -96,6 +112,20 @@ describe('update_issue over REST', () => {
     );
     const last = history.body.filter((activity) => activity.field.presentation === WRITABLE).at(-1);
     expect(last).toMatchObject({ author: { login: 'hf-tech' }, added: 'CONTRACT-1' });
+  });
+
+  it("returns the fresh entry in YouTrack's full output with full=true", async () => {
+    const { status, body } = await post<IssueBody>(env.userToken, `${APP}?full=true`, {
+      field: WRITABLE,
+      value: 'CONTRACT-FULL',
+    });
+    expect(status).toBe(200);
+    same(body, {
+      idReadable: env.issue,
+      customFields: await techEntries((name) => name === WRITABLE, FULL_PROJECTION),
+      $type: 'Issue',
+    });
+    expect(await techValue(WRITABLE)).toBe('CONTRACT-FULL');
   });
 
   it('logs the real caller of a write, without the value', async () => {
@@ -197,7 +227,7 @@ describe('allowed group', () => {
   });
 
   it('gives non-members only their own fields, over REST and MCP', async () => {
-    const own = await get<Entry[]>(env.userToken, `${ISSUE}/customFields?$top=-1`, FULL_PROJECTION);
+    const own = await get<Entry[]>(env.userToken, `${ISSUE}/customFields?$top=-1`, COMPACT_PROJECTION);
     const rest = await get<IssueBody>(env.userToken, APP);
     const tool = (await callTool(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue })) as IssueBody;
     expect(byName(rest.body.customFields)).toEqual(byName(own.body));
@@ -219,24 +249,37 @@ describe('allowed group', () => {
 });
 
 describe('MCP', () => {
-  it('get_issue matches the REST endpoint, with and without fields', async () => {
-    same(
-      await callTool(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue }),
-      (await get(env.userToken, APP)).body,
-    );
-    same(
-      await callTool(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue, fields: ['State', WRITABLE] }),
-      (await get(env.userToken, `${APP}?fields=${encodeURIComponent(`State,${WRITABLE}`)}`)).body,
-    );
+  it('get_issue matches the REST endpoint, with and without fields and full', async () => {
+    const names = encodeURIComponent(`State,${WRITABLE}`);
+    const cases: [Record<string, unknown>, string][] = [
+      [{}, ''],
+      [{ fields: ['State', WRITABLE] }, `?fields=${names}`],
+      [{ full: true }, '?full=true'],
+      [{ fields: ['State', WRITABLE], full: true }, `?fields=${names}&full=true`],
+    ];
+    for (const [args, query] of cases) {
+      same(
+        await callTool(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue, ...args }),
+        (await get(env.userToken, `${APP}${query}`)).body,
+      );
+    }
   });
 
   it('update_issue sets an exposed field and clears it only with clear: true', async () => {
-    const set = (await callTool(env.userToken, 'hidden_fields_update_issue', {
+    const set = await callTool(env.userToken, 'hidden_fields_update_issue', {
       issueId: env.issue,
       field: WRITABLE,
       value: 'MCP-1',
+    });
+    same(set, { idReadable: env.issue, field: WRITABLE, status: 'updated' });
+    expect(await techValue(WRITABLE)).toBe('MCP-1');
+    const full = (await callTool(env.userToken, 'hidden_fields_update_issue', {
+      issueId: env.issue,
+      field: WRITABLE,
+      value: 'MCP-1',
+      full: true,
     })) as IssueBody;
-    expect(set.customFields[0]?.value).toBe('MCP-1');
+    same(full.customFields, await techEntries((name) => name === WRITABLE, FULL_PROJECTION));
     const missing = await callToolRaw(env.userToken, 'hidden_fields_update_issue', {
       issueId: env.issue,
       field: WRITABLE,

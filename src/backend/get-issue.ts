@@ -6,7 +6,7 @@ import { getIssue } from '../core/issue';
 export const aiTool = {
   name: 'get_issue',
   description:
-    "Returns a YouTrack issue with every custom field you can read plus the fields this app exposes although they are hidden in the YouTrack UI. Pass `fields` to get only those custom fields. Same JSON shape as YouTrack's REST API.",
+    "Returns a YouTrack issue with every custom field you can read plus the fields this app exposes although they are hidden in the YouTrack UI. Pass `fields` to get only those custom fields. YouTrack's REST JSON shape, compact by default: each field has its name and its value's text, name, login or presentation. Pass full: true for every attribute.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -16,12 +16,14 @@ export const aiTool = {
         items: { type: 'string' },
         description: 'Optional custom field names. When given, only these fields are returned.',
       },
+      full: { type: 'boolean', description: "Set to true for YouTrack's full REST output instead of the compact one." },
     },
     required: ['issueId'],
   },
   annotations: { title: 'Get an issue, including hidden fields', readOnlyHint: true },
   execute: (ctx: ToolContext) => {
     const issue = visibleIssue(ctx);
-    return toolResult(getIssue(readInput(issue, ctx.currentUser, ctx.settings, namesArgument(ctx.arguments.fields))));
+    const names = namesArgument(ctx.arguments.fields);
+    return toolResult(getIssue(readInput(issue, ctx.currentUser, ctx.settings, names, ctx.arguments.full === true)));
   },
 };

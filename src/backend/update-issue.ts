@@ -6,7 +6,7 @@ import { updateIssue } from '../core/issue';
 export const aiTool = {
   name: 'update_issue',
   description:
-    'Sets one custom field that this app exposes (hidden in the YouTrack UI) on a YouTrack issue. `value` uses YouTrack\'s REST format for the field type: a string for string fields, {"text": "…"} for text, {"name": "…"} for enum/state/version, {"login": "…"} for user fields. Pass clear: true instead of value to empty the field.',
+    'Sets one custom field that this app exposes (hidden in the YouTrack UI) on a YouTrack issue. `value` uses YouTrack\'s REST format for the field type: a string for string fields, {"text": "…"} for text, {"name": "…"} for enum/state/version, {"login": "…"} for user fields. Pass clear: true instead of value to empty the field. Returns a short status; pass full: true to get the updated field back.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -14,6 +14,10 @@ export const aiTool = {
       field: { type: 'string', description: 'The name of an exposed custom field.' },
       value: { description: "The new value in YouTrack's REST format for the field type." },
       clear: { type: 'boolean', description: 'Set to true to empty the field instead of passing a value.' },
+      full: {
+        type: 'boolean',
+        description: "Set to true to get the updated field back in YouTrack's full REST output.",
+      },
     },
     required: ['issueId', 'field'],
   },
@@ -22,6 +26,7 @@ export const aiTool = {
     const issue = visibleIssue(ctx);
     const value = ctx.arguments.clear === true ? null : ctx.arguments.value;
     if (value === undefined) throw new Error('bad_request: value is required; pass clear: true to clear the field');
-    return toolResult(updateIssue(updateInput(issue, ctx.currentUser, ctx.settings, ctx.arguments.field, value)));
+    const full = ctx.arguments.full === true;
+    return toolResult(updateIssue(updateInput(issue, ctx.currentUser, ctx.settings, ctx.arguments.field, value, full)));
   },
 };

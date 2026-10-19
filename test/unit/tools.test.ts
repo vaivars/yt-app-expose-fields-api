@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { aiTool as getIssueTool } from '../../src/backend/get-issue';
 import { aiTool as updateIssueTool } from '../../src/backend/update-issue';
+import { COMPACT_PROJECTION, FULL_PROJECTION } from '../../src/core/projection';
 import type { AppSettings } from '../../src/core/types';
 import { issueRegistry } from '../fakes/scripting-api/entities';
 import { httpFake } from '../fakes/scripting-api/http';
@@ -33,6 +34,7 @@ describe('MCP tools', () => {
     expect(updateIssueTool.annotations.destructiveHint).toBe(true);
     expect(getIssueTool.inputSchema.required).toEqual(['issueId']);
     expect(updateIssueTool.inputSchema.required).toEqual(['issueId', 'field']);
+    for (const tool of [getIssueTool, updateIssueTool]) expect(tool.inputSchema.properties.full.type).toBe('boolean');
   });
 
   it('get_issue returns the ticket with readable and exposed fields', () => {
@@ -44,6 +46,19 @@ describe('MCP tools', () => {
     });
   });
 
+  it('get_issue asks YouTrack for its full output only when full is true', () => {
+    for (const [full, projection] of [
+      [true, FULL_PROJECTION],
+      [false, COMPACT_PROJECTION],
+      ['true', COMPACT_PROJECTION],
+      [undefined, COMPACT_PROJECTION],
+    ] as const) {
+      httpFake.calls = [];
+      getIssueTool.execute(context({ issueId: 'ABC-1', full }));
+      expect(httpFake.calls[0]?.queryParams?.fields, String(full)).toBe(projection);
+    }
+  });
+
   it('get_issue returns only the named fields, given as a list or a comma-separated string', () => {
     const expected = { idReadable: 'ABC-1', customFields: [EXTERNAL_ID], $type: 'Issue' };
     expect(getIssueTool.execute(context({ issueId: 'ABC-1', fields: ['External ID', 42] }))).toEqual(expected);
@@ -51,12 +66,13 @@ describe('MCP tools', () => {
   });
 
   it('update_issue writes an exposed field, and clears it only with clear: true', () => {
-    expect(updateIssueTool.execute(context({ issueId: 'ABC-1', field: 'External ID', value: 'NEW-1' }))).toEqual({
-      idReadable: 'ABC-1',
-      customFields: [{ ...EXTERNAL_ID, value: 'NEW-1' }],
-      $type: 'Issue',
-    });
-    expect(updateIssueTool.execute(context({ issueId: 'ABC-1', field: 'External ID', clear: true }))).toEqual({
+    const status = { idReadable: 'ABC-1', field: 'External ID', status: 'updated' };
+    expect(updateIssueTool.execute(context({ issueId: 'ABC-1', field: 'External ID', value: 'NEW-1' }))).toEqual(
+      status,
+    );
+    expect(
+      updateIssueTool.execute(context({ issueId: 'ABC-1', field: 'External ID', clear: true, full: true })),
+    ).toEqual({
       idReadable: 'ABC-1',
       customFields: [{ ...EXTERNAL_ID, value: null }],
       $type: 'Issue',

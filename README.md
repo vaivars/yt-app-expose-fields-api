@@ -46,17 +46,30 @@ The app holds a permanent token of a technical user who can see the hidden field
 ```
 GET /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue
 GET /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue?fields=Priority,LLM Session
+GET /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue?full=true
 ```
 
 Without `fields`, you get the issue in YouTrack's REST shape: `idReadable`, `summary`, `description`, `created`, `updated`, `resolved`, `reporter`, `project`, and `customFields` with every custom field you can read plus the exposed hidden ones.
 
+The response is compact, to keep it small for AI agents. Each custom field has its `name` and the one attribute that identifies its value:
+
+- `text` for text fields;
+- `name` for enums, states, versions, builds, groups and owned fields;
+- `login` for users;
+- `presentation` for periods;
+- strings, numbers and dates come as they are.
+
+The reporter has only its `login` and the project only its `shortName`.
+
 ```json
 {"idReadable":"ABC-1","summary":"…","description":"…","created":1797000000000,"updated":1797000000000,"resolved":null,
- "reporter":{"login":"jane","fullName":"Jane","$type":"User"},"project":{"shortName":"ABC","name":"…","$type":"Project"},
- "customFields":[{"name":"Priority","value":{"name":"Major",…},"$type":"SingleEnumIssueCustomField",…},
-                 {"name":"LLM Session","value":{"text":"…"},"$type":"TextIssueCustomField",…}],
+ "reporter":{"login":"jane","$type":"User"},"project":{"shortName":"ABC","$type":"Project"},
+ "customFields":[{"name":"Priority","value":{"name":"Major","$type":"EnumBundleElement"},"$type":"SingleEnumIssueCustomField"},
+                 {"name":"LLM Session","value":{"text":"…","$type":"TextFieldValue"},"$type":"TextIssueCustomField"}],
  "$type":"Issue"}
 ```
+
+Add `full=true` to get every attribute YouTrack returns: field ids and types, rendered text as HTML (`markdownText`), user names, colours and so on.
 
 `fields` is a list of custom field **names**, separated by commas; quote a name that contains a comma. Then you get only those fields:
 
@@ -88,7 +101,7 @@ Sets one exposed field. `value` is what YouTrack's REST API expects for the fiel
 | period | `{"presentation": "1d 2h"}` |
 | any | `null` clears the field |
 
-The response is the updated field, in the same shape as `get_issue` with `fields`. Only fields on the exposed list can be set; everything else goes through YouTrack's own API. You need permission to update the issue (and to be in **Allowed group**, if set). The change is made by the technical user, so the issue history shows that user as its author. Only members of the field's "Visible to" group see that history entry.
+The response is a short status, `{"idReadable":"ABC-1","field":"LLM Session","status":"updated"}`. Add `?full=true` to the URL to get the updated field back instead, in the same shape as `get_issue` with `fields` and `full=true`. Only fields on the exposed list can be set; everything else goes through YouTrack's own API. You need permission to update the issue (and to be in **Allowed group**, if set). The change is made by the technical user, so the issue history shows that user as its author. Only members of the field's "Visible to" group see that history entry.
 
 ```sh
 curl -H "Authorization: Bearer $YOUTRACK_TOKEN" \
@@ -109,8 +122,8 @@ https://youtrack.example.com/mcp?customToolPackages=hidden-fields
 
 | Tool | Arguments | Same as |
 |---|---|---|
-| `hidden_fields_get_issue` | `issueId`, optional `fields` (a list of field names) | get_issue |
-| `hidden_fields_update_issue` | `issueId`, `field`, and `value` or `clear: true` | update_issue |
+| `hidden_fields_get_issue` | `issueId`, optional `fields` (a list of field names), optional `full: true` | get_issue |
+| `hidden_fields_update_issue` | `issueId`, `field`, `value` or `clear: true`, optional `full: true` | update_issue |
 
 MCP can't pass `null`, so clear a field with `clear: true`. After you install or update the app, reconnect your MCP client. MCP tools aren't tied to projects: they work for every project the caller can see, including projects the app isn't attached to.
 

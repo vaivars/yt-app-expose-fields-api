@@ -54,6 +54,8 @@ export interface IssueContext {
   settings: AppSettings;
   user: UserLike;
   connect(baseUrl: string): HttpConnectionLike;
+  /** Return YouTrack's full output instead of the compact default. */
+  full?: boolean;
 }
 
 export interface ReadInput extends IssueContext {

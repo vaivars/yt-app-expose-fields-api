@@ -4,14 +4,29 @@ export function normalizeName(name: string): string {
 }
 
 /**
- * Parses a list of field names: the `exposedFields` setting or a `fields` request parameter. A single line is split on commas, and a name in double quotes may contain
- * commas (`A, "B, C"`), since the settings page offers a one-line input. A value with several lines, as set over the
- * API, is split on newlines only.
+ * Splits a list of field names: the `exposedFields` setting or a `fields` request parameter. A single line is split on
+ * commas, and a name in double quotes may contain commas (`A, "B, C"`), since the settings page offers a one-line
+ * input. A value with several lines, as set over the API, is split on newlines only. Names are trimmed and kept as
+ * written; blanks and later duplicates that differ only in case are dropped.
  */
-export function parseNames(raw: string | null | undefined): Set<string> {
+export function listNames(raw: string | null | undefined): string[] {
   const value = raw?.trim() ?? '';
   const names = /[\r\n]/.test(value) ? value.split(/\r?\n/) : splitCommaList(value);
-  return new Set(names.map(normalizeName).filter((name) => name.length > 0));
+  const seen = new Set<string>();
+  const listed: string[] = [];
+  for (const name of names) {
+    const key = normalizeName(name);
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      listed.push(name.trim());
+    }
+  }
+  return listed;
+}
+
+/** The normalized names of a list, for matching: see `listNames`. */
+export function parseNames(raw: string | null | undefined): Set<string> {
+  return new Set(listNames(raw).map(normalizeName));
 }
 
 /** Splits on commas outside double quotes and drops the quotes. */

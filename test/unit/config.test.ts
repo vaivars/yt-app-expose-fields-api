@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { deriveBaseUrl, normalizeName, parseNames } from '../../src/core/config';
+import { deriveBaseUrl, listNames, normalizeName, parseNames } from '../../src/core/config';
+
+describe('listNames', () => {
+  it('keeps names as written, trimmed, dropping blanks and later duplicates that differ only in case', () => {
+    expect(listNames(' External ID, "Fix versions, legacy",, external id ,Typo')).toEqual([
+      'External ID',
+      'Fix versions, legacy',
+      'Typo',
+    ]);
+    expect(listNames('A\nB, C\n')).toEqual(['A', 'B, C']);
+    expect(listNames(undefined)).toEqual([]);
+  });
+});
 
 describe('parseNames', () => {
   it('splits on commas and normalizes names', () => {

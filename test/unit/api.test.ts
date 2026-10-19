@@ -86,10 +86,16 @@ describe('httpHandler', () => {
     }
   });
 
-  it('GET with fields returns only the named fields', () => {
+  it('GET with fields returns only the named fields, and lists the ones it did not return as given', () => {
     expect(call('GET', { params: { fields: 'external id' } }).body).toEqual({
       idReadable: 'ABC-1',
       customFields: [EXTERNAL_ID],
+      $type: 'Issue',
+    });
+    expect(call('GET', { params: { fields: 'external id, Typo' } }).body).toEqual({
+      idReadable: 'ABC-1',
+      customFields: [EXTERNAL_ID],
+      missing: ['Typo'],
       $type: 'Issue',
     });
   });

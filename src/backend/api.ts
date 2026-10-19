@@ -49,6 +49,11 @@ function isJson(ctx: IssueRequestContext): boolean {
   return /^application\/json\s*(;|$)/i.test(contentType.trim());
 }
 
+/** `?full=true` asks for YouTrack's full output instead of the compact default. */
+function full(ctx: IssueRequestContext): boolean {
+  return ctx.request.getParameter('full')?.trim().toLowerCase() === 'true';
+}
+
 /** The POST body as an object, or null. The body can only be read once. */
 function jsonBody(ctx: IssueRequestContext): Record<string, unknown> | null {
   try {
@@ -62,8 +67,8 @@ function jsonBody(ctx: IssueRequestContext): Record<string, unknown> | null {
 }
 
 /**
- * GET  /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue[?fields=Name1,Name2]
- * POST /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue  {"field": "<name>", "value": <value>}
+ * GET  /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue[?fields=Name1,Name2][&full=true]
+ * POST /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue[?full=true]  {"field": "<name>", "value": <value>}
  */
 export const httpHandler = {
   endpoints: [
@@ -75,7 +80,7 @@ export const httpHandler = {
         if (!visible(ctx)) return;
         const fields = ctx.request.getParameter('fields');
         const names = fields ? [...parseNames(fields)] : null;
-        respond(ctx, getIssue(readInput(ctx.issue, ctx.currentUser, ctx.settings, names)));
+        respond(ctx, getIssue(readInput(ctx.issue, ctx.currentUser, ctx.settings, names, full(ctx))));
       },
     },
     {
@@ -97,7 +102,7 @@ export const httpHandler = {
           return;
         }
         const value = Object.hasOwn(body, 'value') ? body.value : undefined;
-        respond(ctx, updateIssue(updateInput(ctx.issue, ctx.currentUser, ctx.settings, body.field, value)));
+        respond(ctx, updateIssue(updateInput(ctx.issue, ctx.currentUser, ctx.settings, body.field, value, full(ctx))));
       },
     },
   ],

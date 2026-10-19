@@ -1,12 +1,12 @@
 import { canUseExposedFields } from './access';
 import { deriveBaseUrl, normalizeName, parseNames } from './config';
-import { FULL_PROJECTION, ISSUE_PROJECTION } from './projection';
+import { COMPACT_ISSUE_PROJECTION, COMPACT_PROJECTION, FULL_PROJECTION, ISSUE_PROJECTION } from './projection';
 import type { CustomFieldEntry, ErrorBody, IssueContext, IssueObject, ReadInput, Result, UpdateInput } from './types';
 import { callYouTrack, issuePath, type Upstream, upstreamError } from './upstream';
 
 /**
  * get_issue: the ticket in YouTrack's REST shape with every custom field the caller can read plus the exposed ones,
- * or, when names are requested, only those fields.
+ * or, when names are requested, only those fields. Compact unless `full` is set.
  */
 export function getIssue(input: ReadInput): Result {
   const upstream = upstreamFor(input);
@@ -18,7 +18,7 @@ export function getIssue(input: ReadInput): Result {
   const wanted = (name: string): boolean =>
     (only === null || only.has(normalizeName(name))) && (exposed.has(normalizeName(name)) || readable(input, name));
 
-  const fields = fetchFields(upstream, input.issueId, FULL_PROJECTION);
+  const fields = fetchFields(upstream, input.issueId, input.full ? FULL_PROJECTION : COMPACT_PROJECTION);
   if (!Array.isArray(fields)) return fields;
 
   const returned = new Set<string>();
@@ -39,14 +39,14 @@ export function getIssue(input: ReadInput): Result {
   const base = callYouTrack(upstream, {
     method: 'GET',
     path: issuePath(input.issueId),
-    query: { fields: ISSUE_PROJECTION },
+    query: { fields: input.full ? ISSUE_PROJECTION : COMPACT_ISSUE_PROJECTION },
   });
   if (!base.ok) return { status: base.status, body: base.body };
   if (!isObject(base.json)) return failure(upstreamError('technical user request returned an unexpected body'));
   return issueBody(base.json, kept);
 }
 
-/** update_issue: sets one exposed field as the technical user and returns its fresh entry. */
+/** update_issue: sets one exposed field as the technical user; returns a short status, or its fresh entry when `full` is set. */
 export function updateIssue(input: UpdateInput): Result {
   const field = typeof input.field === 'string' ? input.field.trim() : '';
   if (!field) return error(400, 'bad_request', 'field is required');
@@ -75,6 +75,7 @@ export function updateIssue(input: UpdateInput): Result {
   });
   if (!written.ok) return { status: written.status, body: written.body };
   input.log.info(`update_issue: ${input.actor} set "${String(target.name)}" on ${input.issueId}`);
+  if (!input.full) return { status: 200, body: { idReadable: input.issueId, field: target.name, status: 'updated' } };
 
   const fresh = fetchFields(upstream, input.issueId, FULL_PROJECTION);
   if (!Array.isArray(fresh)) return fresh;

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { httpHandler } from '../../src/backend/api';
-import { FULL_PROJECTION, ISSUE_PROJECTION } from '../../src/core/projection';
+import {
+  COMPACT_ISSUE_PROJECTION,
+  COMPACT_PROJECTION,
+  FULL_PROJECTION,
+  ISSUE_PROJECTION,
+} from '../../src/core/projection';
 import { httpFake } from '../fakes/scripting-api/http';
 import { fakeIssue, fakeRequest, fakeResponse, fakeUser, fakeYouTrack } from '../fakes/youtrack';
 
@@ -49,7 +54,7 @@ describe('httpHandler', () => {
     ]);
   });
 
-  it('GET returns the ticket with readable and exposed fields, calling YouTrack as the technical user', () => {
+  it('GET returns the ticket with readable and exposed fields, compact, calling YouTrack as the technical user', () => {
     const response = call('GET');
     expect(response.code).toBe(200);
     expect(response.body).toEqual({
@@ -59,9 +64,26 @@ describe('httpHandler', () => {
       $type: 'Issue',
     });
     expect(httpFake.calls.map((c) => [c.url, c.timeout, c.token, c.method, c.uri, c.queryParams?.fields])).toEqual([
-      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1/customFields', FULL_PROJECTION],
-      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1', ISSUE_PROJECTION],
+      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1/customFields', COMPACT_PROJECTION],
+      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1', COMPACT_ISSUE_PROJECTION],
     ]);
+  });
+
+  it("GET with full=true asks YouTrack for its full output; other values don't", () => {
+    for (const [full, projections] of [
+      ['true', [FULL_PROJECTION, ISSUE_PROJECTION]],
+      [' TRUE ', [FULL_PROJECTION, ISSUE_PROJECTION]],
+      ['false', [COMPACT_PROJECTION, COMPACT_ISSUE_PROJECTION]],
+      ['1', [COMPACT_PROJECTION, COMPACT_ISSUE_PROJECTION]],
+      ['', [COMPACT_PROJECTION, COMPACT_ISSUE_PROJECTION]],
+    ] as const) {
+      httpFake.calls = [];
+      expect(call('GET', { params: { full } }).code).toBe(200);
+      expect(
+        httpFake.calls.map((c) => c.queryParams?.fields),
+        full,
+      ).toEqual(projections);
+    }
   });
 
   it('GET with fields returns only the named fields', () => {
@@ -72,19 +94,25 @@ describe('httpHandler', () => {
     });
   });
 
-  it('POST updates an exposed field and returns its fresh entry', () => {
+  it('POST updates an exposed field and returns a short status', () => {
     const response = call('POST', { body: '{"field":"External ID","value":"NEW-1"}' });
     expect(response.code).toBe(200);
-    expect(response.body).toEqual({
-      idReadable: 'ABC-1',
-      customFields: [{ ...EXTERNAL_ID, value: 'NEW-1' }],
-      $type: 'Issue',
-    });
+    expect(response.body).toEqual({ idReadable: 'ABC-1', field: 'External ID', status: 'updated' });
     const post = httpFake.calls.find((c) => c.method === 'POST');
     expect(post?.headers).toEqual([['Content-Type', 'application/json']]);
     expect(JSON.parse(post?.payload ?? '')).toEqual({
       customFields: [{ name: 'External ID', $type: 'SimpleIssueCustomField', value: 'NEW-1' }],
     });
+  });
+
+  it("POST with full=true returns the fresh entry in YouTrack's full output", () => {
+    const response = call('POST', { params: { full: 'true' }, body: '{"field":"External ID","value":"NEW-1"}' });
+    expect(response.body).toEqual({
+      idReadable: 'ABC-1',
+      customFields: [{ ...EXTERNAL_ID, value: 'NEW-1' }],
+      $type: 'Issue',
+    });
+    expect(httpFake.calls.at(-1)?.queryParams?.fields).toBe(FULL_PROJECTION);
   });
 
   it('POST clears a field with null and rejects a body without value or that is not a JSON object', () => {

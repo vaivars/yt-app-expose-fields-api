@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { getIssue, updateIssue } from '../../src/core/issue';
-import { FULL_PROJECTION, ISSUE_PROJECTION } from '../../src/core/projection';
+import {
+  COMPACT_ISSUE_PROJECTION,
+  COMPACT_PROJECTION,
+  FULL_PROJECTION,
+  ISSUE_PROJECTION,
+} from '../../src/core/projection';
 import type { HttpConnectionLike, HttpResponseLike, ReadInput, UpdateInput } from '../../src/core/types';
 
 const PRIORITY = { $type: 'SingleEnumIssueCustomField', id: '1', name: 'Priority', value: { name: 'Major' } };
@@ -84,7 +89,7 @@ function updateInput(overrides: Partial<UpdateInput> = {}, fake = youTrack()) {
 }
 
 describe('getIssue', () => {
-  it('returns the ticket with the readable and exposed fields, $type last', () => {
+  it('returns the ticket with the readable and exposed fields, compact by default, $type last', () => {
     const { input, calls } = readInput();
     const result = getIssue(input);
     expect(result).toEqual({
@@ -93,9 +98,15 @@ describe('getIssue', () => {
     });
     expect(Object.keys(result.body).at(-1)).toBe('$type');
     expect(calls).toEqual([
-      { method: 'GET', uri: '/api/issues/ABC-1/customFields', query: { fields: FULL_PROJECTION, $top: '-1' } },
-      { method: 'GET', uri: '/api/issues/ABC-1', query: { fields: ISSUE_PROJECTION } },
+      { method: 'GET', uri: '/api/issues/ABC-1/customFields', query: { fields: COMPACT_PROJECTION, $top: '-1' } },
+      { method: 'GET', uri: '/api/issues/ABC-1', query: { fields: COMPACT_ISSUE_PROJECTION } },
     ]);
+  });
+
+  it('asks YouTrack for its full output when full is set', () => {
+    const { input, calls } = readInput({ full: true });
+    expect(getIssue(input).body).toEqual({ ...BASE, customFields: [PRIORITY, EXTERNAL_ID, STATE] });
+    expect(calls.map((call) => call.query.fields)).toEqual([FULL_PROJECTION, ISSUE_PROJECTION]);
   });
 
   it('returns only the named fields without the ticket attributes', () => {
@@ -194,20 +205,32 @@ describe('getIssue', () => {
 });
 
 describe('updateIssue', () => {
-  it('writes an exposed field as the technical user and returns its fresh entry', () => {
+  it('writes an exposed field as the technical user and returns a short status without reading it back', () => {
     const { input, calls } = updateInput();
     expect(updateIssue(input)).toEqual({
       status: 200,
-      body: { idReadable: 'ABC-1', customFields: [{ ...EXTERNAL_ID, value: 'NEW-1' }], $type: 'Issue' },
+      body: { idReadable: 'ABC-1', field: 'External ID', status: 'updated' },
     });
     expect(calls.map((call) => `${call.method} ${call.uri}`)).toEqual([
       'GET /api/issues/ABC-1/customFields',
       'POST /api/issues/ABC-1',
-      'GET /api/issues/ABC-1/customFields',
     ]);
     expect(calls[1]?.payload).toEqual({
       customFields: [{ name: 'External ID', $type: 'SimpleIssueCustomField', value: 'NEW-1' }],
     });
+  });
+
+  it("returns the fresh entry in YouTrack's full output when full is set", () => {
+    const { input, calls } = updateInput({ full: true });
+    expect(updateIssue(input)).toEqual({
+      status: 200,
+      body: { idReadable: 'ABC-1', customFields: [{ ...EXTERNAL_ID, value: 'NEW-1' }], $type: 'Issue' },
+    });
+    expect(calls.map((call) => `${call.method} ${call.uri} ${call.query.fields}`)).toEqual([
+      'GET /api/issues/ABC-1/customFields $type,name',
+      'POST /api/issues/ABC-1 idReadable',
+      `GET /api/issues/ABC-1/customFields ${FULL_PROJECTION}`,
+    ]);
   });
 
   it('logs who wrote which field on which issue, without the value', () => {
@@ -226,7 +249,7 @@ describe('updateIssue', () => {
 
   it('matches the field name case-insensitively and sends YouTrack its real name', () => {
     const { input, calls } = updateInput({ field: ' external id ' });
-    expect(updateIssue(input).status).toBe(200);
+    expect(updateIssue(input).body).toEqual({ idReadable: 'ABC-1', field: 'External ID', status: 'updated' });
     expect(calls[1]?.payload).toEqual({
       customFields: [{ name: 'External ID', $type: 'SimpleIssueCustomField', value: 'NEW-1' }],
     });

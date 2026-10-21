@@ -1,14 +1,8 @@
 name: release
 
 on:
-  workflow_call:
-    inputs:
-      tag:
-        type: string
-        required: true
-      dry_run:
-        type: boolean
-        default: false
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
@@ -22,14 +16,14 @@ on:
 permissions: {}
 
 concurrency:
-  group: release-${{ inputs.tag }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  TAG: ${{ inputs.tag }}
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
-  # Builds and tests with the npm toolchain, read-only. The jobs that hold release permissions install nothing.
+  # Builds with the npm toolchain, read-only. The jobs that hold release permissions install nothing.
   build:
     name: build
     runs-on: ubuntu-latest
@@ -46,14 +40,13 @@ jobs:
         with:
           persist-credentials: false
           # A run that uploads builds the tag, never the branch it was started from.
-          ref: ${{ !inputs.dry_run && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          ref: ${{ !inputs.dry_run && inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8 # v5.1.2
         with:
           version: 2026.10.6
           # No cache in a release build: a poisoned cache entry must not reach release artifacts.
           cache: false
-      # Lint and audit run in CI before merge; a fresh advisory must not block a merged release.
-      - run: mise run test
+      # Tests, lint and audit run in CI before merge; a fresh advisory must not block a merged release.
       - run: mise run package
       - name: Check that the tag matches the versions
         if: ${{ !inputs.dry_run }}
@@ -103,9 +96,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          # Needed only for manual runs; release-please creates the release before calling this workflow.
+          # release-plz creates the draft release right after pushing the tag; wait for it to appear.
           for _ in $(seq 1 30); do gh release view "$TAG" > /dev/null 2>&1 && break; sleep 10; done
           gh release upload "$TAG" out/*.zip out/SHA256SUMS --clobber
+          # Releases are immutable once published, so the draft is published only after its assets are attached.
+          gh release edit "$TAG" --draft=false
 
   marketplace:
     name: marketplace
@@ -114,7 +109,8 @@ jobs:
     if: ${{ !inputs.dry_run && vars.MARKETPLACE_PLUGIN_ID != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: marketplace
+    # MARKETPLACE_TOKEN is a secret of this environment, which only main and release tags can use.
+    environment: Release
     permissions: {}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

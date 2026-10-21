@@ -1,0 +1,86 @@
+name: release-plz
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+permissions: {}
+
+# Runs wait for each other and are never cancelled or dropped, so no release is skipped.
+concurrency:
+  group: release-plz
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  gate:
+    name: gate
+    # Only the release branch may release or rebuild the release PR.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    # The app's credentials are secrets of this environment, which only main can use.
+    environment: Release
+    outputs:
+      release: ${{ steps.secrets.outputs.release }}
+    steps:
+      - id: secrets
+        env:
+          APP_ID: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::RELEASE_PLZ_APP_ID and RELEASE_PLZ_APP_PRIVATE_KEY are not set, so release-plz is skipped"
+          fi
+
+  release:
+    name: release
+    needs: [gate]
+    if: needs.gate.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    environment: Release
+    steps:
+      # Changes made with GITHUB_TOKEN start no workflows; the app's token starts CI and release.yml.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      # After a release PR is merged: pushes the tag and creates a draft release, which release.yml publishes.
+      - name: Release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          skip-github-pull-request: true
+
+  release-pr:
+    name: release-pr
+    needs: [gate]
+    if: needs.gate.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    environment: Release
+    steps:
+      # Changes made with GITHUB_TOKEN start no workflows; the app's token starts CI and release.yml.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      # Skipped while a merged release PR is still untagged, so it never races the release job.
+      - name: Release PR
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          skip-github-release: true

@@ -7,7 +7,8 @@ on:
 
 permissions: {}
 
-# Runs wait for each other and are never cancelled or dropped, so no release is skipped.
+# Runs wait for each other and are never cancelled or dropped, so no release is skipped. Unlike rust-yt-cli,
+# this workflow uses an environment, and jactionlint requires such workflows to queue their runs.
 concurrency:
   group: release-plz
   cancel-in-progress: false

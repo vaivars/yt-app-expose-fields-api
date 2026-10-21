@@ -160,12 +160,12 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 ## Verify a release
 
-Each release has `hidden-fields-<version>.zip`, `SHA256SUMS`, and a build provenance attestation.
+Each release has `hidden-fields-<version>.zip`, `SHA256SUMS`, and a build provenance attestation. Releases are published only once these are attached, and are immutable from then on.
 
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing   # macOS: shasum -a 256 -c SHA256SUMS --ignore-missing
 gh attestation verify hidden-fields-0.0.1.zip --repo vaivars/yt-app-expose-fields-api \
-  --signer-workflow vaivars/yt-app-expose-fields-api/.github/workflows/release.yml --source-ref refs/heads/main
+  --signer-workflow vaivars/yt-app-expose-fields-api/.github/workflows/release.yml --source-ref refs/tags/v0.0.1
 ```
 
 The zip is reproducible: `mise run package` on the release tag produces the same SHA-256.

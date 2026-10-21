@@ -15,40 +15,50 @@ concurrency:
   queue: max
 
 jobs:
+  gate:
+    name: gate
+    # Only the release branch may release or rebuild the release PR.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    # The app's credentials are secrets of this environment, which only main can use.
+    environment: Release
+    outputs:
+      release: ${{ steps.secrets.outputs.release }}
+    steps:
+      - id: secrets
+        env:
+          APP_ID: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::RELEASE_PLEASE_APP_ID and RELEASE_PLEASE_APP_PRIVATE_KEY are not set, so release-please is skipped"
+          fi
+
   release-please:
     name: release-please
-    # Only main may release or rebuild the release PR.
-    if: github.ref == 'refs/heads/main'
+    needs: [gate]
+    if: needs.gate.outputs.release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: {}
-    # The app's credentials are secrets of this environment, which only main can use.
     environment: Release
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - id: secrets
-        env:
-          CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
-          PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-        run: |
-          if [ -n "$CLIENT_ID" ] && [ -n "$PRIVATE_KEY" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::RELEASE_APP_CLIENT_ID and RELEASE_APP_PRIVATE_KEY are not set in the release environment, so release-please is skipped"
-          fi
-      # Changes made with GITHUB_TOKEN start no workflows; the app's token lets CI run on the release PR.
+      # Changes made with GITHUB_TOKEN start no workflows; the app's token starts CI on the release PR.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        if: steps.secrets.outputs.configured == 'true'
         id: app-token
         with:
-          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
-        if: steps.secrets.outputs.configured == 'true'
         id: release
         with:
           token: ${{ steps.app-token.outputs.token }}

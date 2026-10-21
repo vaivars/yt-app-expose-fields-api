@@ -29,7 +29,7 @@ env:
   TAG: ${{ inputs.tag }}
 
 jobs:
-  # Builds and tests with the npm toolchain, read-only. The jobs that hold release permissions install nothing.
+  # Builds with the npm toolchain, read-only. The jobs that hold release permissions install nothing.
   build:
     name: build
     runs-on: ubuntu-latest
@@ -52,8 +52,7 @@ jobs:
           version: 2026.10.6
           # No cache in a release build: a poisoned cache entry must not reach release artifacts.
           cache: false
-      # Lint and audit run in CI before merge; a fresh advisory must not block a merged release.
-      - run: mise run test
+      # Tests, lint and audit run in CI before merge; a fresh advisory must not block a merged release.
       - run: mise run package
       - name: Check that the tag matches the versions
         if: ${{ !inputs.dry_run }}

@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     permissions: {}
     # The app's credentials are secrets of this environment, which only main can use.
-    environment: release
+    environment: Release
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}

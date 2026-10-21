@@ -13,7 +13,7 @@ Requires YouTrack 2025.3 or newer.
 
 ## How it works
 
-The app holds a permanent token of a technical user who can see the hidden fields. In YouTrack, "Visible to" gates both reading and updating a field, so the app does both on the caller's behalf:
+The app holds a permanent token of a technical user who can see the hidden fields. In YouTrack, "Visible to" stops everyone outside the group from reading a field, and everyone but administrators from updating it, so the app does both on the caller's behalf:
 
 1. It checks that the caller can see the issue (and, for updates, may update it).
 2. It calls YouTrack's own REST API as the technical user.
@@ -136,6 +136,7 @@ MCP can't pass `null`, so clear a field with `clear: true`. After you install or
 ## Security
 
 - **Hiding isn't secrecy.** Hiding a field declutters the UI. Anyone who can read an issue can read its exposed fields, and anyone who can update it can change them, unless you set **Allowed group**.
+- **Administrators can still write hidden fields.** YouTrack administrators can update a hidden field through YouTrack's own REST API and MCP tools, although they can't read it there. Regular users outside the "Visible to" group can do neither.
 - **Guest access.** If the guest account can read a project, its exposed fields can be read without signing in, unless you set Allowed group.
 - **Fixed attributes.** Requests run with the technical user's rights, so callers can't choose attributes: the app always asks YouTrack for the same issue attributes and custom field values, never other issues, projects, tags or user emails. Keep the technical user's rights minimal anyway.
 - **The token stays inside YouTrack.** It's stored as a secret setting, sent only to your YouTrack, and never returned or logged.

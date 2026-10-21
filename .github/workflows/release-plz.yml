@@ -1,4 +1,4 @@
-name: release-please
+name: release-plz
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ permissions: {}
 
 # Runs wait for each other and are never cancelled or dropped, so no release is skipped.
 concurrency:
-  group: release-please
+  group: release-plz
   cancel-in-progress: false
   queue: max
 
@@ -34,7 +34,7 @@ jobs:
           if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
             echo "release=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::RELEASE_PLZ_APP_ID and RELEASE_PLZ_APP_PRIVATE_KEY are not set, so release-please is skipped"
+            echo "::notice::RELEASE_PLZ_APP_ID and RELEASE_PLZ_APP_PRIVATE_KEY are not set, so release-plz is skipped"
           fi
 
   release:

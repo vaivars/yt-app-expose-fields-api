@@ -29,13 +29,13 @@ jobs:
     steps:
       - id: secrets
         env:
-          APP_ID: ${{ secrets.RELEASE_PLEASE_APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          APP_ID: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
         run: |
           if [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
             echo "release=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::RELEASE_PLEASE_APP_ID and RELEASE_PLEASE_APP_PRIVATE_KEY are not set, so release-please is skipped"
+            echo "::notice::RELEASE_PLZ_APP_ID and RELEASE_PLZ_APP_PRIVATE_KEY are not set, so release-please is skipped"
           fi
 
   release-please:
@@ -54,8 +54,8 @@ jobs:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
-          client-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0

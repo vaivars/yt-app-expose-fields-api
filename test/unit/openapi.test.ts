@@ -151,6 +151,35 @@ describe('describeApi', () => {
     for (const id of ids) expect(id).toMatch(/^[a-z]+(-[a-z]+)*$/);
   });
 
+  it('groups the operations that do the same thing under x-youtrack-command, whichever endpoints are on', () => {
+    const commands = (document: OpenApiDocument) =>
+      Object.fromEntries(
+        operations(document).map(({ operation: op }) => [String(op.operationId), op['x-youtrack-command']]),
+      );
+    expect(commands(doc)).toEqual({
+      'get-issue': 'get-issue',
+      'get-issue-attached': 'get-issue',
+      'update-issue': 'update-issue',
+      'update-issue-attached': 'update-issue',
+    });
+    expect(commands(describeApi('1.2.3', { attached: true, global: false }))).toEqual({
+      'get-issue-attached': 'get-issue',
+      'update-issue-attached': 'update-issue',
+    });
+    expect(commands(describeApi('1.2.3', { attached: false, global: true }))).toEqual({
+      'get-issue': 'get-issue',
+      'update-issue': 'update-issue',
+    });
+  });
+
+  it('types full as a boolean', () => {
+    const full = operations(doc).flatMap(({ operation: op }) =>
+      ((op.parameters as Json[] | undefined) ?? []).filter((parameter) => parameter.name === 'full'),
+    );
+    expect(full).toHaveLength(4);
+    for (const parameter of full) expect(parameter.schema).toEqual({ type: 'boolean' });
+  });
+
   it('never forbids additional properties', () => {
     walk(doc.components.schemas, (key, child) => {
       if (key === 'additionalProperties') expect(child).not.toBe(false);

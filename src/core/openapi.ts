@@ -11,12 +11,14 @@ export interface Parameter {
   in: 'path' | 'query';
   required: boolean;
   description: string;
-  schema: { type: 'string' };
+  schema: { type: 'string' | 'boolean' };
   'x-youtrack-entity'?: 'issue';
 }
 
 export interface Operation {
   operationId: string;
+  /** The action this operation performs; operations that share it are the same action at different scopes. */
+  'x-youtrack-command': string;
   summary: string;
   description?: string;
   parameters?: Parameter[];
@@ -79,8 +81,8 @@ function error(description: string): Record<string, unknown> {
   return { description, content: json(ref('Error')) };
 }
 
-function query(name: string, description: string, required = false): Parameter {
-  return { name, in: 'query', required, description, schema: { type: 'string' } };
+function query(name: string, description: string, required = false, type: 'string' | 'boolean' = 'string'): Parameter {
+  return { name, in: 'query', required, description, schema: { type } };
 }
 
 const FIELDS = query(
@@ -93,6 +95,8 @@ const FIELDS = query(
 const FULL = query(
   'full',
   '`true` returns every attribute YouTrack returns instead of the compact shape. Case-insensitive; any other value means compact.',
+  false,
+  'boolean',
 );
 
 const ISSUE_ID: Parameter = {
@@ -121,6 +125,7 @@ function operations(appWide: boolean): Pick<PathItem, 'get' | 'post'> {
   return {
     get: {
       operationId: `get-issue${suffix}`,
+      'x-youtrack-command': 'get-issue',
       summary: 'Get an issue, including hidden fields',
       description:
         "The issue in YouTrack's REST shape, with every custom field you can read plus the fields this app exposes " +
@@ -138,6 +143,7 @@ function operations(appWide: boolean): Pick<PathItem, 'get' | 'post'> {
     },
     post: {
       operationId: `update-issue${suffix}`,
+      'x-youtrack-command': 'update-issue',
       summary: 'Set one exposed field',
       description:
         'Sets one custom field on the exposed list, as the technical user, so the issue history shows that user. ' +

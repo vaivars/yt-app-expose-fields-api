@@ -200,6 +200,7 @@ A client can use this app, and any YouTrack app that follows the same convention
 - Fetch `GET /api/extensionEndpoints/<app-id>/meta/openapi.json` with the user's own token. It's OpenAPI 3.1 JSON and lists only the operations that are currently available.
 - `info.version` is the app's version, and `info.x-youtrack-app.id` is its app id.
 - Each `operationId` is stable and kebab-case, so it can serve as a command name.
+- `x-youtrack-command` on an operation names its action. Operations that share it are the same action at different scopes: show one command, and call the `global` operation when it's listed, otherwise another listed one. The command keeps its name when an administrator disables one of the scopes. Without `x-youtrack-command`, the `operationId` is the command name.
 - Paths start with `/api/`; join them to the YouTrack base URL.
 - `x-youtrack-scope` on a path says where it works: `global` anywhere; `project` or `issue` only in projects the app is attached to.
 - `x-youtrack-entity` marks parameters that name a YouTrack entity: `issue`, `project`, `article` or `user`. App-wide endpoints take them in the query, because YouTrack doesn't support path parameters there.

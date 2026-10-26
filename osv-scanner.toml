@@ -4,3 +4,8 @@
 id = "GHSA-vfj7-8cjw-p6xm"
 ignoreUntil = 2027-04-12T00:00:00Z
 reason = "braces <=3.0.3 has no fixed release; it comes only through @jetbrains/youtrack-apps-tools, a dev-only CLI that expands our own glob patterns. Nothing in the app zip depends on it."
+
+[[IgnoredVulns]]
+id = "GHSA-mrhx-c7xc-m3w5"
+ignoreUntil = 2027-04-26T00:00:00Z
+reason = "zod 3 has no fixed release (the fix is 4.6.6); it comes only through @modelcontextprotocol/sdk, used by the contract tests' MCP client, and @jetbrains/youtrack-apps-tools, a dev-only CLI. Both validate input from our own test YouTrack, and nothing in the app zip depends on zod."

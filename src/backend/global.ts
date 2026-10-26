@@ -1,6 +1,7 @@
 import type { Issue, User } from '@jetbrains/youtrack-scripting-api/entities';
 import { notFound, type RestRequest, type RestResponse, readIssue, respond, writeIssue } from '../adapters/rest';
 import { findIssue } from '../adapters/youtrack';
+import { disabled, isEnabled } from '../core/switches';
 import type { AppSettings } from '../core/types';
 
 /** The parts of YouTrack's app-wide request context these endpoints use. */
@@ -12,10 +13,15 @@ export interface GlobalRequestContext {
 }
 
 /**
- * The issue named by `?issueId=`, if the caller can see it. YouTrack checks nothing for app-wide endpoints, so this is
- * the only access check: an issue the caller can't see gets the same 404 as one that doesn't exist.
+ * The issue named by `?issueId=`, if this endpoint is switched on and the caller can see the issue. The switch comes
+ * first, so a switched-off endpoint answers the same for every issue. YouTrack checks nothing for app-wide endpoints,
+ * so this is the only access check: an issue the caller can't see gets the same 404 as one that doesn't exist.
  */
 function visibleIssue(ctx: GlobalRequestContext): Issue | null {
+  if (!isEnabled(ctx.settings, 'globalRestEnabled')) {
+    respond(ctx.response, disabled('globalRestEnabled'));
+    return null;
+  }
   const issueId = ctx.request.getParameter('issueId')?.trim() ?? '';
   if (!issueId) {
     respond(ctx.response, {

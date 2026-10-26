@@ -45,6 +45,10 @@ export interface AppSettings {
   /** Name of the group whose members may use exposed fields; blank means everyone who can read the issue. */
   allowedGroup?: string | null;
   youtrackUrl?: string | null;
+  /** The interface switches; only `false` turns one off. */
+  mcpEnabled?: boolean | null;
+  attachedRestEnabled?: boolean | null;
+  globalRestEnabled?: boolean | null;
 }
 
 /** What both operations need, already extracted from YouTrack objects by an adapter. */

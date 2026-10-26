@@ -27,6 +27,27 @@
       "title": "YouTrack base URL",
       "description": "Optional. The URL the app uses to call the YouTrack REST API. Leave empty to use the URL from issue links.",
       "x-scope": "GLOBAL"
+    },
+    "mcpEnabled": {
+      "type": "boolean",
+      "title": "MCP tools",
+      "description": "Turn off to refuse every call to the app's MCP tools. They still appear in MCP clients' tool lists.",
+      "default": true,
+      "x-scope": "GLOBAL"
+    },
+    "attachedRestEnabled": {
+      "type": "boolean",
+      "title": "REST endpoints in attached projects",
+      "description": "Turn off to refuse every call to /api/issues/{id}/extensionEndpoints/hidden-fields/api/issue.",
+      "default": true,
+      "x-scope": "GLOBAL"
+    },
+    "globalRestEnabled": {
+      "type": "boolean",
+      "title": "App-wide REST endpoints",
+      "description": "Turn off to refuse every call to /api/extensionEndpoints/hidden-fields/global/issue, which works in every project, attached or not.",
+      "default": true,
+      "x-scope": "GLOBAL"
     }
   },
   "required": ["exposedFields", "serviceToken"]

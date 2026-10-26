@@ -1,5 +1,6 @@
 import type { Issue, User } from '@jetbrains/youtrack-scripting-api/entities';
 import { listNames } from '../core/config';
+import { disabled, isEnabled } from '../core/switches';
 import type { AppSettings, ErrorBody, IssueObject, Result } from '../core/types';
 import { findIssue } from './youtrack';
 
@@ -8,6 +9,11 @@ export interface ToolContext {
   arguments: Record<string, unknown>;
   currentUser: User;
   settings: AppSettings;
+}
+
+/** Refuses every call while the MCP switch is off, before looking at the arguments. */
+export function assertMcpEnabled(settings: AppSettings): void {
+  if (!isEnabled(settings, 'mcpEnabled')) toolResult(disabled('mcpEnabled'));
 }
 
 /** The issue named by `issueId` if the caller can see it; anything else is "not found". */

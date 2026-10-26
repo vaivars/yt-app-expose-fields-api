@@ -50,7 +50,7 @@ Releases are prepared by automation in a `chore(main): release X.Y.Z` pull reque
 
 ### Compatibility
 
-`minYouTrackVersion` is `2025.3.0`. Don't use scripting APIs marked `@since 2026.x` in `@jetbrains/youtrack-workflow-types`.
+`minYouTrackVersion` is `2026.2.0`, the release `@jetbrains/youtrack-workflow-types` is pinned to. Don't use scripting APIs marked `@since` a later release.
 
 ### Tool versions
 

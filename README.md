@@ -9,7 +9,7 @@ This app is the workaround. Make those fields visible only to a technical group,
 
 A typical use: an AI agent keeps its session state in a hidden text field, so whoever picks up the issue next can continue where it left off, without any human seeing that state in the UI.
 
-Requires YouTrack 2025.3 or newer.
+Requires YouTrack 2026.2 or newer.
 
 ## How it works
 

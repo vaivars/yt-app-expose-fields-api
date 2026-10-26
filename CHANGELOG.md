@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/vaivars/yt-app-expose-fields-api/compare/v0.0.1...v0.1.0) (2026-10-26)
+
+
+### Features
+
+* **rest:** group same-action operations with x-youtrack-command in the API description ([#10](https://github.com/vaivars/yt-app-expose-fields-api/issues/10)) ([b807951](https://github.com/vaivars/yt-app-expose-fields-api/commit/b8079519d52b6a21023a5a263406acff8e8f01a3))
+
 ## 0.0.1 (2026-10-26)
 
 

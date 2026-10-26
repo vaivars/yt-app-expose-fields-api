@@ -3,7 +3,7 @@
   "name": "hidden-fields",
   "title": "Hidden Fields API",
   "description": "Reads and updates custom fields that are hidden from the YouTrack UI, through REST endpoints and MCP tools.",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "url": "https://github.com/vaivars/yt-app-expose-fields-api",
   "vendor": {
     "name": "Klavs Dzelzs-Vaivars",

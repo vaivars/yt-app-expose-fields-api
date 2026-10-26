@@ -174,7 +174,8 @@ MCP can't pass `null`, so clear a field with `clear: true`. After you install or
 
 ## Security
 
-- **Hiding isn't secrecy.** Hiding a field declutters the UI. Anyone who can read an issue can read its exposed fields, and anyone who can update it can change them, unless you set **Allowed group**.
+- **Unexposed fields stay hidden.** "Visible to" keeps a field from everyone outside its group, in the UI and when they read issues through YouTrack's API. The app never returns fields that aren't on the exposed list.
+- **Exposed fields are out of the way, not restricted.** Anyone who can read an issue can read its exposed fields through the app, and anyone who can update it can change them, unless you set **Allowed group**.
 - **Administrators can still write hidden fields.** YouTrack administrators can update a hidden field through YouTrack's own REST API and MCP tools, although they can't read it there. Regular users outside the "Visible to" group can do neither.
 - **Guest access.** If the guest account can read a project, its exposed fields can be read without signing in, unless you set Allowed group.
 - **Fixed attributes.** Requests run with the technical user's rights, so callers can't choose attributes: the app always asks YouTrack for the same issue attributes and custom field values, never other issues, projects, tags or user emails. Keep the technical user's rights minimal anyway.

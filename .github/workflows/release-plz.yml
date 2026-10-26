@@ -63,7 +63,7 @@ jobs:
 
   release-pr:
     name: release-pr
-    needs: [gate]
+    needs: [gate, release]
     if: needs.gate.outputs.release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -78,7 +78,7 @@ jobs:
           private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
-      # Skipped while a merged release PR is still untagged, so it never races the release job.
+      # Runs after the release job, so the tag it just pushed is visible and the next release PR starts from it.
       - name: Release PR
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:

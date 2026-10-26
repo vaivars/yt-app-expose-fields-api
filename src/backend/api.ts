@@ -1,69 +1,21 @@
 import type { Issue, User } from '@jetbrains/youtrack-scripting-api/entities';
-import { readInput, updateInput } from '../adapters/youtrack';
-import { listNames } from '../core/config';
-import { getIssue, updateIssue } from '../core/issue';
-import type { AppSettings, Result } from '../core/types';
+import { notFound, type RestRequest, type RestResponse, readIssue, respond, writeIssue } from '../adapters/rest';
+import type { AppSettings } from '../core/types';
 
 /** The parts of YouTrack's issue-scoped request context these endpoints use. */
 export interface IssueRequestContext {
   issue: Issue;
   currentUser: User;
   settings: AppSettings;
-  /** YouTrack's runtime exposes request headers as a list; it has no getHeader(). */
-  request: {
-    body: string;
-    headers?: { name: string; value: string }[];
-    getParameter(name: string): string | undefined;
-  };
-  response: { code: number; json(data: unknown): void };
-}
-
-const BAD_BODY = 'The request body must be a JSON object like {"field": "<name>", "value": <value>}';
-
-function respond(ctx: IssueRequestContext, result: Result): void {
-  ctx.response.code = result.status;
-  ctx.response.json(result.body);
+  request: RestRequest;
+  response: RestResponse;
 }
 
 /** YouTrack already checks issue access for issue-scoped endpoints; this keeps the app safe if that ever changes. */
 function visible(ctx: IssueRequestContext): boolean {
   if (ctx.issue.isVisibleTo(ctx.currentUser)) return true;
-  respond(ctx, {
-    status: 404,
-    body: { error: 'not_found', error_description: `Issue "${ctx.issue.id}" was not found` },
-  });
+  respond(ctx.response, notFound(ctx.issue.id));
   return false;
-}
-
-/**
- * Only JSON bodies are accepted. A browser can send text/plain, form and multipart bodies across origins without a
- * preflight, so accepting them would let another web page write fields with a signed-in user's session.
- */
-function isJson(ctx: IssueRequestContext): boolean {
-  let contentType = '';
-  try {
-    contentType = ctx.request.headers?.find((header) => header.name.toLowerCase() === 'content-type')?.value ?? '';
-  } catch {
-    // treated as missing
-  }
-  return /^application\/json\s*(;|$)/i.test(contentType.trim());
-}
-
-/** `?full=true` asks for YouTrack's full output instead of the compact default. */
-function full(ctx: IssueRequestContext): boolean {
-  return ctx.request.getParameter('full')?.trim().toLowerCase() === 'true';
-}
-
-/** The POST body as an object, or null. The body can only be read once. */
-function jsonBody(ctx: IssueRequestContext): Record<string, unknown> | null {
-  try {
-    const parsed: unknown = JSON.parse(ctx.request.body);
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -78,9 +30,7 @@ export const httpHandler = {
       scope: 'issue',
       handle(ctx: IssueRequestContext): void {
         if (!visible(ctx)) return;
-        const fields = ctx.request.getParameter('fields');
-        const names = fields ? listNames(fields) : null;
-        respond(ctx, getIssue(readInput(ctx.issue, ctx.currentUser, ctx.settings, names, full(ctx))));
+        respond(ctx.response, readIssue(ctx.issue, ctx.currentUser, ctx.settings, ctx.request));
       },
     },
     {
@@ -89,20 +39,7 @@ export const httpHandler = {
       scope: 'issue',
       handle(ctx: IssueRequestContext): void {
         if (!visible(ctx)) return;
-        if (!isJson(ctx)) {
-          respond(ctx, {
-            status: 415,
-            body: { error: 'unsupported_media_type', error_description: 'Send the request body as application/json' },
-          });
-          return;
-        }
-        const body = jsonBody(ctx);
-        if (!body) {
-          respond(ctx, { status: 400, body: { error: 'bad_request', error_description: BAD_BODY } });
-          return;
-        }
-        const value = Object.hasOwn(body, 'value') ? body.value : undefined;
-        respond(ctx, updateIssue(updateInput(ctx.issue, ctx.currentUser, ctx.settings, body.field, value, full(ctx))));
+        respond(ctx.response, writeIssue(ctx.issue, ctx.currentUser, ctx.settings, ctx.request));
       },
     },
   ],

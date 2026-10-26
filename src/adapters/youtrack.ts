@@ -1,4 +1,4 @@
-import type { Issue, User } from '@jetbrains/youtrack-scripting-api/entities';
+import { Issue, type User } from '@jetbrains/youtrack-scripting-api/entities';
 import { Connection } from '@jetbrains/youtrack-scripting-api/http';
 import type { AppSettings, HttpConnectionLike, IssueContext, ReadInput, UpdateInput } from '../core/types';
 
@@ -7,6 +7,15 @@ export const UPSTREAM_TIMEOUT_MS = 10_000;
 
 export function connect(baseUrl: string): HttpConnectionLike {
   return new Connection(baseUrl, null, UPSTREAM_TIMEOUT_MS);
+}
+
+/** The issue with this readable or database ID, or null when there's none or the ID is malformed. */
+export function findIssue(issueId: string): Issue | null {
+  try {
+    return Issue.findById(issueId) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** Messages land in the app's log (Administration → Apps → Hidden Fields API → Logs). */

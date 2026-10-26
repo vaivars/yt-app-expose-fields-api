@@ -1,6 +1,7 @@
-import { Issue, type User } from '@jetbrains/youtrack-scripting-api/entities';
+import type { Issue, User } from '@jetbrains/youtrack-scripting-api/entities';
 import { listNames } from '../core/config';
 import type { AppSettings, ErrorBody, IssueObject, Result } from '../core/types';
+import { findIssue } from './youtrack';
 
 /** The parts of YouTrack's AI tool context the tools use. */
 export interface ToolContext {
@@ -31,12 +32,4 @@ export function toolResult(result: Result): IssueObject {
     throw new Error(`${error.error}: ${error.error_description}`);
   }
   return result.body as IssueObject;
-}
-
-function findIssue(issueId: string): Issue | null {
-  try {
-    return Issue.findById(issueId) ?? null;
-  } catch {
-    return null;
-  }
 }

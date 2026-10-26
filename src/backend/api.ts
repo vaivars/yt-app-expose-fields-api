@@ -17,8 +17,8 @@ export interface IssueRequestContext {
  * access for issue-scoped endpoints; the visibility check keeps the app safe if that ever changes.
  */
 function available(ctx: IssueRequestContext): boolean {
-  if (!isEnabled(ctx.settings, 'attachedRestEnabled')) {
-    respond(ctx.response, disabled('attachedRestEnabled'));
+  if (!isEnabled(ctx.settings, 'attachedRestDisabled')) {
+    respond(ctx.response, disabled('attachedRestDisabled'));
     return false;
   }
   if (ctx.issue.isVisibleTo(ctx.currentUser)) return true;

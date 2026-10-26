@@ -15,11 +15,11 @@ const WRITABLE_FIXTURE = 'EXT-42';
 
 /** Each described path with the real URL of the test issue and the switch that turns it off. */
 const ENDPOINTS = [
-  { path: GLOBAL_PATH, url: `${GLOBAL_PATH}?issueId=${env.issue}`, off: { globalRestEnabled: false } },
+  { path: GLOBAL_PATH, url: `${GLOBAL_PATH}?issueId=${env.issue}`, off: { globalRestDisabled: true } },
   {
     path: ATTACHED_PATH,
     url: ATTACHED_PATH.replace('{id}', env.issue),
-    off: { attachedRestEnabled: false },
+    off: { attachedRestDisabled: true },
   },
 ];
 
@@ -69,10 +69,10 @@ describe('meta/openapi.json', () => {
   it('lists only the switched-on REST endpoints', async () => {
     try {
       for (const [switches, rest] of [
-        [{ attachedRestEnabled: false }, { attached: false, global: true }],
-        [{ globalRestEnabled: false }, { attached: true, global: false }],
+        [{ attachedRestDisabled: true }, { attached: false, global: true }],
+        [{ globalRestDisabled: true }, { attached: true, global: false }],
         [
-          { attachedRestEnabled: false, globalRestEnabled: false },
+          { attachedRestDisabled: true, globalRestDisabled: true },
           { attached: false, global: false },
         ],
       ] as const) {

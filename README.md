@@ -39,21 +39,21 @@ The app holds a permanent token of a technical user who can see the hidden field
    | Technical user token | The permanent token from step 2 |
    | Allowed group | Optional: the name of a group. Only its members can read and update the exposed fields; if no group has that name, nobody can. |
    | YouTrack base URL | Optional: set it if YouTrack can't reach itself at the URL in issue links |
-   | MCP tools | On by default. Turn off to refuse every call to the MCP tools |
-   | REST endpoints in attached projects | On by default. Turn off to refuse the per-project URLs |
-   | App-wide REST endpoints | On by default. Turn off to refuse the app-wide URLs |
+   | Disable MCP tools | Optional: refuse every call to the MCP tools |
+   | Disable REST endpoints in attached projects | Optional: refuse the per-project URLs |
+   | Disable app-wide REST endpoints | Optional: refuse the app-wide URLs |
 
 6. **Optional: attach the app** to projects where you want the per-project URLs. The app-wide URLs and the MCP tools work without it.
 
 ### Choose the interfaces
 
-Each interface has its own switch in the settings, and all are on by default:
+Every interface is on until you tick its **Disable …** box in the settings:
 
-- **MCP only:** turn off both REST switches.
-- **REST tied to attachment:** turn off App-wide REST endpoints. REST then works only in projects the app is attached to.
-- **App-wide REST only:** turn off REST endpoints in attached projects.
+- **MCP only:** tick both REST boxes.
+- **REST tied to attachment:** tick Disable app-wide REST endpoints. REST then works only in projects the app is attached to.
+- **App-wide REST only:** tick Disable REST endpoints in attached projects.
 
-A switched-off REST endpoint answers `403` with error `disabled`, and a switched-off MCP tool returns an error.
+A disabled REST endpoint answers `403` with error `disabled`, and a disabled MCP tool returns an error.
 
 ## Use it
 
@@ -148,9 +148,9 @@ curl -X POST -H "Authorization: Bearer $YOUTRACK_TOKEN" -H "Content-Type: applic
 GET /api/extensionEndpoints/hidden-fields/meta/openapi.json
 ```
 
-An OpenAPI 3.1 description of the REST endpoints that are switched on: their parameters, request bodies, responses, errors and auth. `info.version` is the installed app version and `info.x-youtrack-app.id` is `hidden-fields`. Any signed-in user can fetch it.
+An OpenAPI 3.1 description of the REST endpoints that are enabled: their parameters, request bodies, responses, errors and auth. `info.version` is the installed app version and `info.x-youtrack-app.id` is `hidden-fields`. Any signed-in user can fetch it.
 
-It never contains field names, data or settings, apart from which REST endpoints are switched on. A `404` means the app isn't installed, or the installed version is older than this endpoint.
+It never contains field names, data or settings, apart from which REST endpoints are enabled. A `404` means the app isn't installed, or the installed version is older than this endpoint.
 
 ```sh
 curl -H "Authorization: Bearer $YOUTRACK_TOKEN" \
@@ -182,8 +182,8 @@ MCP can't pass `null`, so clear a field with `clear: true`. After you install or
 - **Writes are narrow.** update_issue only sets fields on the exposed list, only from JSON requests (`Content-Type: application/json`, so other web pages can't submit writes with a signed-in user's session).
 - **Who made a change.** The issue history shows the technical user as the author, so the app logs the real caller for every write: `update_issue: <login> set "<field>" on <issue>` (Administration → Apps → Hidden Fields API → Logs). The value isn't logged.
 - **Workflows see the technical user.** Workflow rules, guards and "Updatable by" judge a write by the technical user, not the caller. Expose only metadata fields that no user-based rule protects, never fields like State.
-- **Attaching doesn't limit access.** The app-wide URLs and the MCP tools work in every project the technical user can read, attached or not. To limit where the app works, limit the technical user's project access, set Allowed group, or switch interfaces off (see [Choose the interfaces](#choose-the-interfaces)).
-- **Switched-off MCP tools stay listed.** YouTrack doesn't let an app hide its tools, so a switched-off tool still appears in MCP clients' tool lists and refuses every call.
+- **Attaching doesn't limit access.** The app-wide URLs and the MCP tools work in every project the technical user can read, attached or not. To limit where the app works, limit the technical user's project access, set Allowed group, or disable interfaces (see [Choose the interfaces](#choose-the-interfaces)).
+- **Disabled MCP tools stay listed.** YouTrack doesn't let an app hide its tools, so a disabled tool still appears in MCP clients' tool lists and refuses every call.
 
 Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
@@ -191,7 +191,7 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 Released paths, parameters, operation ids, response fields and error codes are only ever added to, never renamed or removed. Clients should ignore what they don't recognise. A breaking change gets a new path.
 
-Switching an endpoint off isn't a breaking change: it drops out of the description and answers `403` with error `disabled`.
+Disabling an endpoint isn't a breaking change: it drops out of the description and answers `403` with error `disabled`.
 
 ## For client authors
 
@@ -208,14 +208,14 @@ A client can use this app, and any YouTrack app that follows the same convention
 Responses that mean something specific:
 
 - `404` from the description URL: the app isn't installed, or it predates this convention.
-- `403` with error `disabled`: the endpoint was switched off since you fetched the description. Fetch it again.
+- `403` with error `disabled`: the endpoint was disabled since you fetched the description. Fetch it again.
 - `404` "HTTP handler not found" from a `project` or `issue` operation: the app isn't attached to that project.
 
 ## Troubleshooting
 
 - **An exposed field is missing.** The technical user can't read it. Check that it's in the field's Visible to group. For REST calls the app logs a warning (Administration → Apps → Hidden Fields API → Logs); MCP calls can't detect this case.
 - **`403 forbidden`.** Allowed group is set and you aren't a member, you can't update the issue, or the field isn't on the exposed list.
-- **`403 disabled`.** That interface is switched off in the app settings (see [Choose the interfaces](#choose-the-interfaces)).
+- **`403 disabled`.** That interface is disabled in the app settings (see [Choose the interfaces](#choose-the-interfaces)).
 - **`404` "HTTP handler not found by path hidden-fields/api/issue".** The app isn't attached to that issue's project. Attach it, or use the app-wide URL.
 - **`502 upstream_error`.** The technical user's call to YouTrack failed. The description says why:
   - `HTTP 404`: the technical user can't read this issue or project. Give it read access there; this is the usual cause when you start using the app in a new project.

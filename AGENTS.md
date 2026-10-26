@@ -56,7 +56,7 @@ Releases are prepared by automation in a `chore(main): release X.Y.Z` pull reque
 
 - `GET /api/extensionEndpoints/hidden-fields/meta/openapi.json` describes the REST endpoints; `src/core/openapi.ts` builds it. Any change to a REST endpoint, parameter, body, response or status updates it, and `test/unit/openapi.test.ts` fails otherwise.
 - `src/backend/api.ts` (per-project) and `src/backend/global.ts` (app-wide) serve the same requests through `src/adapters/rest.ts`. A change there applies to both, and `test/unit/global.test.ts` checks that they answer alike.
-- Each interface has its own switch in `src/settings.json`; a new interface gets one too.
+- Each interface has its own "Disable …" checkbox in `src/settings.json`, and a new interface gets one too. Only `true` turns an interface off: YouTrack's settings page shows a never-saved box unticked whatever its `default`, so unticked has to mean on.
 - Changes are additive: released paths, parameters, operation ids, response fields and error codes are never renamed or removed. A breaking change gets a new path.
 
 ### Tool versions

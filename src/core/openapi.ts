@@ -50,7 +50,7 @@ const INFO_DESCRIPTION = [
   'The app calls YouTrack as a technical user that can see those fields, and returns only what the caller may get.',
   'Compatibility: released paths, parameters, operation ids, response fields and error codes are only ever added to,',
   "never renamed or removed, so ignore what you don't recognise. A breaking change gets a new path.",
-  'An endpoint switched off in the app settings drops out of this document and answers 403 with error `disabled`.',
+  'An endpoint disabled in the app settings drops out of this document and answers 403 with error `disabled`.',
 ].join(' ');
 
 const READ_VALUE = [
@@ -130,7 +130,7 @@ function operations(appWide: boolean): Pick<PathItem, 'get' | 'post'> {
         '200': { description: 'The issue.', content: json(ref('Issue')) },
         '400': error(`\`bad_request\`: ${missingId}YouTrack rejected the request; its error is passed through.`),
         '401': UNAUTHORIZED,
-        '403': error('`disabled`: this endpoint is turned off in the app settings.'),
+        '403': error('`disabled`: this endpoint is disabled in the app settings.'),
         '404': error("`not_found`: the issue doesn't exist, or you can't see it."),
         '500': CONFIGURATION,
         '502': UPSTREAM,
@@ -155,7 +155,7 @@ function operations(appWide: boolean): Pick<PathItem, 'get' | 'post'> {
         ),
         '401': UNAUTHORIZED,
         '403': error(
-          '`disabled`: this endpoint is turned off in the app settings. `forbidden`: you are not in the allowed ' +
+          '`disabled`: this endpoint is disabled in the app settings. `forbidden`: you are not in the allowed ' +
             "group, can't update the issue, or the field isn't exposed.",
         ),
         '404': error("`not_found`: the issue doesn't exist or you can't see it, or the field isn't on this issue."),

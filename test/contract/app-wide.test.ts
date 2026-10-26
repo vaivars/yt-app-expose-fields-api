@@ -9,7 +9,7 @@ const GLOBAL = `${GLOBAL_BASE}?issueId=${env.issue}`;
 const WRITABLE = 'HF External ID';
 const WRITABLE_FIXTURE = 'EXT-42';
 const PRIVATE_FIELD = 'HF Private Probe';
-const MCP_OFF = 'disabled: The MCP tools are turned off in the app settings';
+const MCP_OFF = 'disabled: The MCP tools are disabled in the app settings';
 
 type IssueBody = Record<string, unknown> & { customFields: Entry[]; missing?: string[] };
 
@@ -186,18 +186,18 @@ describe('switches', () => {
   });
 
   it('turn each interface off on its own', async () => {
-    const keys: Switch[] = ['mcpEnabled', 'attachedRestEnabled', 'globalRestEnabled'];
+    const keys: Switch[] = ['mcpDisabled', 'attachedRestDisabled', 'globalRestDisabled'];
     for (const key of keys) {
-      await appSettings(null, { [key]: false });
+      await appSettings(null, { [key]: true });
       const attached = await get<{ error?: string }>(env.userToken, APP);
       const global = await get<{ error?: string }>(env.userToken, GLOBAL);
       const tool = await callToolRaw(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue });
-      expect(attached.status, key).toBe(key === 'attachedRestEnabled' ? 403 : 200);
-      expect(global.status, key).toBe(key === 'globalRestEnabled' ? 403 : 200);
-      if (key === 'attachedRestEnabled') expect(attached.body.error).toBe('disabled');
-      if (key === 'globalRestEnabled') expect(global.body.error).toBe('disabled');
-      expect(tool.isError, key).toBe(key === 'mcpEnabled');
-      if (key === 'mcpEnabled') expect(tool.text).toContain(MCP_OFF);
+      expect(attached.status, key).toBe(key === 'attachedRestDisabled' ? 403 : 200);
+      expect(global.status, key).toBe(key === 'globalRestDisabled' ? 403 : 200);
+      if (key === 'attachedRestDisabled') expect(attached.body.error).toBe('disabled');
+      if (key === 'globalRestDisabled') expect(global.body.error).toBe('disabled');
+      expect(tool.isError, key).toBe(key === 'mcpDisabled');
+      if (key === 'mcpDisabled') expect(tool.text).toContain(MCP_OFF);
     }
   });
 });

@@ -13,7 +13,7 @@ export interface ToolContext {
 
 /** Refuses every call while the MCP switch is off, before looking at the arguments. */
 export function assertMcpEnabled(settings: AppSettings): void {
-  if (!isEnabled(settings, 'mcpEnabled')) toolResult(disabled('mcpEnabled'));
+  if (!isEnabled(settings, 'mcpDisabled')) toolResult(disabled('mcpDisabled'));
 }
 
 /** The issue named by `issueId` if the caller can see it; anything else is "not found". */

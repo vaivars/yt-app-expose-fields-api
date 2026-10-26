@@ -27,8 +27,8 @@ describe('meta httpHandler', () => {
     for (const attached of [true, false]) {
       for (const global of [true, false]) {
         const settings: AppSettings = {
-          ...(attached ? {} : { attachedRestEnabled: false }),
-          ...(global ? {} : { globalRestEnabled: false }),
+          ...(attached ? {} : { attachedRestDisabled: true }),
+          ...(global ? {} : { globalRestDisabled: true }),
         };
         const response = serve(settings);
         expect(response.code).toBe(200);
@@ -51,7 +51,7 @@ describe('meta httpHandler', () => {
           serviceToken: 'perm:secret-zq',
           allowedGroup: 'group-zq',
           youtrackUrl: 'https://internal-zq.example',
-          mcpEnabled: false,
+          mcpDisabled: true,
         },
       ]) {
         bodies.push(serve(settings, user).body);

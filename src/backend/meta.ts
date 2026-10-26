@@ -24,8 +24,8 @@ export const httpHandler = {
         ctx.response.code = 200;
         ctx.response.json(
           describeApi(version, {
-            attached: isEnabled(ctx.settings, 'attachedRestEnabled'),
-            global: isEnabled(ctx.settings, 'globalRestEnabled'),
+            attached: isEnabled(ctx.settings, 'attachedRestDisabled'),
+            global: isEnabled(ctx.settings, 'globalRestDisabled'),
           }),
         );
       },

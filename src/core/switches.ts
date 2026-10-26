@@ -1,17 +1,20 @@
 import type { AppSettings, Result } from './types';
 
-/** The settings that turn each interface on or off. */
-export type Switch = 'mcpEnabled' | 'attachedRestEnabled' | 'globalRestEnabled';
+/** The settings that turn each interface off. They're "Disable …" checkboxes, so an unticked or never-saved box is on. */
+export type Switch = 'mcpDisabled' | 'attachedRestDisabled' | 'globalRestDisabled';
 
 const OFF: Record<Switch, string> = {
-  mcpEnabled: 'The MCP tools are turned off in the app settings',
-  attachedRestEnabled: 'The REST endpoints in attached projects are turned off in the app settings',
-  globalRestEnabled: 'The app-wide REST endpoints are turned off in the app settings',
+  mcpDisabled: 'The MCP tools are disabled in the app settings',
+  attachedRestDisabled: 'The REST endpoints in attached projects are disabled in the app settings',
+  globalRestDisabled: 'The app-wide REST endpoints are disabled in the app settings',
 };
 
-/** Only an explicit `false` turns an interface off, so settings saved before a switch existed keep it on. */
+/**
+ * Only a ticked box turns an interface off. YouTrack's settings page shows a never-saved box unticked whatever its
+ * default, so that's the state that has to mean on.
+ */
 export function isEnabled(settings: AppSettings, key: Switch): boolean {
-  return settings[key] !== false;
+  return settings[key] !== true;
 }
 
 /** The answer of a switched-off interface: the same for every issue and request, so it reveals nothing. */

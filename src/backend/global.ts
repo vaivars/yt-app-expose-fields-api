@@ -18,8 +18,8 @@ export interface GlobalRequestContext {
  * so this is the only access check: an issue the caller can't see gets the same 404 as one that doesn't exist.
  */
 function visibleIssue(ctx: GlobalRequestContext): Issue | null {
-  if (!isEnabled(ctx.settings, 'globalRestEnabled')) {
-    respond(ctx.response, disabled('globalRestEnabled'));
+  if (!isEnabled(ctx.settings, 'globalRestDisabled')) {
+    respond(ctx.response, disabled('globalRestDisabled'));
     return null;
   }
   const issueId = ctx.request.getParameter('issueId')?.trim() ?? '';

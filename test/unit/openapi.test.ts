@@ -208,8 +208,8 @@ describe('description matches the REST handlers', () => {
       for (const issueId of [null, 'NOPE-1', 'HIDDEN-1']) {
         record(GLOBAL_PATH, method.toLowerCase(), callGlobal(method, { issueId, body: UPDATE }));
       }
-      const attachedOff = { body: UPDATE, settings: { ...SETTINGS, attachedRestEnabled: false } };
-      const globalOff = { body: UPDATE, settings: { ...SETTINGS, globalRestEnabled: false } };
+      const attachedOff = { body: UPDATE, settings: { ...SETTINGS, attachedRestDisabled: true } };
+      const globalOff = { body: UPDATE, settings: { ...SETTINGS, globalRestDisabled: true } };
       record(ATTACHED_PATH, method.toLowerCase(), callAttached(method, attachedOff));
       record(GLOBAL_PATH, method.toLowerCase(), callGlobal(method, globalOff));
     }

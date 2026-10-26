@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import type { Switch } from '../../src/core/switches.ts';
 import { contractEnv as env } from './env.ts';
 
 export type Entry = Record<string, unknown> & { name?: string };
@@ -55,12 +56,19 @@ export function cli(...args: string[]): void {
   });
 }
 
-/** Writes the app's global settings over REST (no CLI, so tokens never reach argv); pass a group name to restrict. */
-export async function appSettings(allowedGroup: string | null = null): Promise<void> {
+/**
+ * Writes the app's global settings over REST (no CLI, so tokens never reach argv); pass a group name to restrict, and
+ * switches to turn interfaces off. Switches left out aren't written, as for an app saved before they existed.
+ */
+export async function appSettings(
+  allowedGroup: string | null = null,
+  switches: Partial<Record<Switch, boolean>> = {},
+): Promise<void> {
   const settings: Record<string, unknown> = {
     exposedFields: env.exposed.join(','),
     serviceToken: env.techToken,
     youtrackUrl: env.selfUrl,
+    ...switches,
   };
   if (allowedGroup) settings.allowedGroup = allowedGroup;
   const apps = await get<{ id: string; name: string }[]>(env.adminToken, '/api/admin/apps?$top=-1', 'id,name');

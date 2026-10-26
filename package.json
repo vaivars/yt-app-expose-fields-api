@@ -17,10 +17,15 @@
     "@jetbrains/youtrack-apps-tools": "1.0.3",
     "@jetbrains/youtrack-workflow-types": "2026.2.0",
     "@modelcontextprotocol/sdk": "1.32.1",
+    "@seriousme/openapi-schema-validator": "2.11.0",
     "@types/node": "24.19.2",
+    "ajv": "8.20.0",
     "fflate": "0.8.3",
     "typescript": "7.0.2",
     "vite": "6.4.4",
     "vitest": "5.0.4"
+  },
+  "overrides": {
+    "ts-to-zod": "5.1.0"
   }
 }

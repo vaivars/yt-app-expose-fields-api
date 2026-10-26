@@ -1,4 +1,4 @@
-import { namesArgument, type ToolContext, toolResult, visibleIssue } from '../adapters/tool';
+import { assertMcpEnabled, namesArgument, type ToolContext, toolResult, visibleIssue } from '../adapters/tool';
 import { readInput } from '../adapters/youtrack';
 import { getIssue } from '../core/issue';
 
@@ -22,6 +22,7 @@ export const aiTool = {
   },
   annotations: { title: 'Get an issue, including hidden fields', readOnlyHint: true },
   execute: (ctx: ToolContext) => {
+    assertMcpEnabled(ctx.settings);
     const issue = visibleIssue(ctx);
     const names = namesArgument(ctx.arguments.fields);
     return toolResult(getIssue(readInput(issue, ctx.currentUser, ctx.settings, names, ctx.arguments.full === true)));

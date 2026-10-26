@@ -10,6 +10,6 @@
     "url": "https://github.com/vaivars"
   },
   "icon": "icon.svg",
-  "minYouTrackVersion": "2025.3.0",
+  "minYouTrackVersion": "2026.2.0",
   "aiToolPrefix": "hidden_fields"
 }

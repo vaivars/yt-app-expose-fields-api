@@ -1,4 +1,4 @@
-import { type ToolContext, toolResult, visibleIssue } from '../adapters/tool';
+import { assertMcpEnabled, type ToolContext, toolResult, visibleIssue } from '../adapters/tool';
 import { updateInput } from '../adapters/youtrack';
 import { updateIssue } from '../core/issue';
 
@@ -23,6 +23,7 @@ export const aiTool = {
   },
   annotations: { title: 'Update a hidden field', readOnlyHint: false, destructiveHint: true, idempotentHint: true },
   execute: (ctx: ToolContext) => {
+    assertMcpEnabled(ctx.settings);
     const issue = visibleIssue(ctx);
     const value = ctx.arguments.clear === true ? null : ctx.arguments.value;
     if (value === undefined) throw new Error('bad_request: value is required; pass clear: true to clear the field');

@@ -4,9 +4,9 @@ Hidden Fields API is a YouTrack app that serves custom fields hidden from the Yo
 
 ## Layout
 
-- `src/core/`: pure logic with no YouTrack imports (settings, projection, access, the upstream call, the pipeline).
-- `src/adapters/`: turns YouTrack objects into pipeline input.
-- `src/backend/`: one file per YouTrack module, each exporting exactly one of `httpHandler` or `aiTool`. File names, endpoint paths, tool names and parameters are public API; never rename them. Never delete a backend file either: YouTrack refuses to upgrade an installed app when a script file disappears.
+- `src/core/`: pure logic with no YouTrack imports (settings, switches, projection, access, the upstream call, the pipeline, the OpenAPI description).
+- `src/adapters/`: turns YouTrack objects into pipeline input. `rest.ts` holds the request handling that both REST handler files share.
+- `src/backend/`: one file per YouTrack module, each exporting exactly one of `httpHandler` or `aiTool`. File names, endpoint paths, tool names, parameters and settings keys are public API; never rename them. Never delete a backend file either: YouTrack refuses to upgrade an installed app when a script file disappears.
 - `scripts/`: build, package, local YouTrack, author check.
 - `test/unit/`: unit tests, with fakes for YouTrack's runtime modules in `test/fakes/`.
 - `test/contract/`: tests against a real YouTrack.
@@ -50,7 +50,14 @@ Releases are prepared by automation in a `chore(main): release X.Y.Z` pull reque
 
 ### Compatibility
 
-`minYouTrackVersion` is `2025.3.0`. Don't use scripting APIs marked `@since 2026.x` in `@jetbrains/youtrack-workflow-types`.
+`minYouTrackVersion` is `2026.2.0`, the release `@jetbrains/youtrack-workflow-types` is pinned to. Don't use scripting APIs marked `@since` a later release.
+
+### REST API description
+
+- `GET /api/extensionEndpoints/hidden-fields/meta/openapi.json` describes the REST endpoints; `src/core/openapi.ts` builds it. Any change to a REST endpoint, parameter, body, response or status updates it, and `test/unit/openapi.test.ts` fails otherwise.
+- `src/backend/api.ts` (per-project) and `src/backend/global.ts` (app-wide) serve the same requests through `src/adapters/rest.ts`. A change there applies to both, and `test/unit/global.test.ts` checks that they answer alike.
+- Each interface has its own "Disable …" checkbox in `src/settings.json`, and a new interface gets one too. Only `true` turns an interface off: YouTrack's settings page shows a never-saved box unticked whatever its `default`, so unticked has to mean on.
+- Changes are additive: released paths, parameters, operation ids, response fields and error codes are never renamed or removed. A breaking change gets a new path.
 
 ### Tool versions
 
@@ -58,6 +65,7 @@ Releases are prepared by automation in a `chore(main): release X.Y.Z` pull reque
 - `min_version` in `mise.toml` and the `version` input of `jdx/mise-action` in every workflow pin the same mise release. Change them together.
 - npm dependencies are exact (`save-exact`), installed with `npm ci`, and run with `ignore-scripts`.
 - Every advisory ignored in `osv-scanner.toml` needs a reason and an expiry date.
+- Every npm `overrides` entry needs a reason here. `ts-to-zod` 5.1.0: `@jetbrains/youtrack-apps-tools` 1.0.3 pins `ts-to-zod` 3, and with it `zod` 3, which has an unfixed advisory. The apps tools use `ts-to-zod` only in a Vite plugin this repo doesn't use. Remove the override once they accept `ts-to-zod` 5.
 
 ### GitHub Actions
 

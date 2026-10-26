@@ -24,5 +24,8 @@
     "typescript": "7.0.2",
     "vite": "6.4.4",
     "vitest": "5.0.4"
+  },
+  "overrides": {
+    "ts-to-zod": "5.1.0"
   }
 }

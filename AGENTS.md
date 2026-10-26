@@ -65,6 +65,7 @@ Releases are prepared by automation in a `chore(main): release X.Y.Z` pull reque
 - `min_version` in `mise.toml` and the `version` input of `jdx/mise-action` in every workflow pin the same mise release. Change them together.
 - npm dependencies are exact (`save-exact`), installed with `npm ci`, and run with `ignore-scripts`.
 - Every advisory ignored in `osv-scanner.toml` needs a reason and an expiry date.
+- Every npm `overrides` entry needs a reason here. `ts-to-zod` 5.1.0: `@jetbrains/youtrack-apps-tools` 1.0.3 pins `ts-to-zod` 3, and with it `zod` 3, which has an unfixed advisory. The apps tools use `ts-to-zod` only in a Vite plugin this repo doesn't use. Remove the override once they accept `ts-to-zod` 5.
 
 ### GitHub Actions
 

@@ -4,9 +4,9 @@ Hidden Fields API is a YouTrack app that serves custom fields hidden from the Yo
 
 ## Layout
 
-- `src/core/`: pure logic with no YouTrack imports (settings, projection, access, the upstream call, the pipeline).
-- `src/adapters/`: turns YouTrack objects into pipeline input.
-- `src/backend/`: one file per YouTrack module, each exporting exactly one of `httpHandler` or `aiTool`. File names, endpoint paths, tool names and parameters are public API; never rename them. Never delete a backend file either: YouTrack refuses to upgrade an installed app when a script file disappears.
+- `src/core/`: pure logic with no YouTrack imports (settings, switches, projection, access, the upstream call, the pipeline, the OpenAPI description).
+- `src/adapters/`: turns YouTrack objects into pipeline input. `rest.ts` holds the request handling that both REST handler files share.
+- `src/backend/`: one file per YouTrack module, each exporting exactly one of `httpHandler` or `aiTool`. File names, endpoint paths, tool names, parameters and settings keys are public API; never rename them. Never delete a backend file either: YouTrack refuses to upgrade an installed app when a script file disappears.
 - `scripts/`: build, package, local YouTrack, author check.
 - `test/unit/`: unit tests, with fakes for YouTrack's runtime modules in `test/fakes/`.
 - `test/contract/`: tests against a real YouTrack.
@@ -51,6 +51,13 @@ Releases are prepared by automation in a `chore(main): release X.Y.Z` pull reque
 ### Compatibility
 
 `minYouTrackVersion` is `2026.2.0`, the release `@jetbrains/youtrack-workflow-types` is pinned to. Don't use scripting APIs marked `@since` a later release.
+
+### REST API description
+
+- `GET /api/extensionEndpoints/hidden-fields/meta/openapi.json` describes the REST endpoints; `src/core/openapi.ts` builds it. Any change to a REST endpoint, parameter, body, response or status updates it, and `test/unit/openapi.test.ts` fails otherwise.
+- `src/backend/api.ts` (per-project) and `src/backend/global.ts` (app-wide) serve the same requests through `src/adapters/rest.ts`. A change there applies to both, and `test/unit/global.test.ts` checks that they answer alike.
+- Each interface has its own switch in `src/settings.json`; a new interface gets one too.
+- Changes are additive: released paths, parameters, operation ids, response fields and error codes are never renamed or removed. A breaking change gets a new path.
 
 ### Tool versions
 

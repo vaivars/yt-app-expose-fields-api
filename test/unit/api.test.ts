@@ -12,6 +12,8 @@ import { fakeIssue, fakeRequest, fakeResponse, fakeUser, fakeYouTrack } from '..
 const PRIORITY = { name: 'Priority', value: { name: 'Major' }, $type: 'SingleEnumIssueCustomField' };
 const EXTERNAL_ID = { name: 'External ID', value: 'X-9', $type: 'SimpleIssueCustomField' };
 const BASE = { idReadable: 'ABC-1', summary: 'S', $type: 'Issue' };
+const COMPACT = `${COMPACT_ISSUE_PROJECTION},customFields(${COMPACT_PROJECTION})`;
+const FULL = `${ISSUE_PROJECTION},customFields(${FULL_PROJECTION})`;
 const SETTINGS = { exposedFields: 'External ID', serviceToken: 'perm:t' };
 
 function call(
@@ -64,18 +66,17 @@ describe('httpHandler', () => {
       $type: 'Issue',
     });
     expect(httpFake.calls.map((c) => [c.url, c.timeout, c.token, c.method, c.uri, c.queryParams?.fields])).toEqual([
-      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1/customFields', COMPACT_PROJECTION],
-      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1', COMPACT_ISSUE_PROJECTION],
+      ['https://yt.example', 10000, 'perm:t', 'GET', '/api/issues/ABC-1', COMPACT],
     ]);
   });
 
   it("GET with full=true asks YouTrack for its full output; other values don't", () => {
     for (const [full, projections] of [
-      ['true', [FULL_PROJECTION, ISSUE_PROJECTION]],
-      [' TRUE ', [FULL_PROJECTION, ISSUE_PROJECTION]],
-      ['false', [COMPACT_PROJECTION, COMPACT_ISSUE_PROJECTION]],
-      ['1', [COMPACT_PROJECTION, COMPACT_ISSUE_PROJECTION]],
-      ['', [COMPACT_PROJECTION, COMPACT_ISSUE_PROJECTION]],
+      ['true', [FULL]],
+      [' TRUE ', [FULL]],
+      ['false', [COMPACT]],
+      ['1', [COMPACT]],
+      ['', [COMPACT]],
     ] as const) {
       httpFake.calls = [];
       expect(call('GET', { params: { full } }).code).toBe(200);
@@ -118,7 +119,10 @@ describe('httpHandler', () => {
       customFields: [{ ...EXTERNAL_ID, value: 'NEW-1' }],
       $type: 'Issue',
     });
-    expect(httpFake.calls.at(-1)?.queryParams?.fields).toBe(FULL_PROJECTION);
+    expect(httpFake.calls.map((c) => `${c.method} ${c.queryParams?.fields}`)).toEqual([
+      'GET $type,name',
+      `POST idReadable,customFields(${FULL_PROJECTION})`,
+    ]);
   });
 
   it('POST clears a field with null and rejects a body without value or that is not a JSON object', () => {

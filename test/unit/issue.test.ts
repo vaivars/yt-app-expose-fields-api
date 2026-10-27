@@ -22,7 +22,10 @@ interface Call {
   payload?: unknown;
 }
 
-/** A fake YouTrack: answers customFields and issue GETs, records every call and accepts POSTs. */
+/**
+ * A fake YouTrack: answers customFields and issue GETs, records every call and accepts POSTs. The issue comes with its
+ * custom fields first, so tests see that the app moves them to the end.
+ */
 function youTrack(overrides: { fields?: unknown; base?: HttpResponseLike; post?: HttpResponseLike } = {}) {
   const calls: Call[] = [];
   let fields = overrides.fields ?? FIELDS;
@@ -32,19 +35,24 @@ function youTrack(overrides: { fields?: unknown; base?: HttpResponseLike; post?:
     getSync(uri, query) {
       calls.push({ method: 'GET', uri, query });
       if (uri.endsWith('/customFields')) return { code: 200, response: JSON.stringify(fields) };
-      return overrides.base ?? { code: 200, response: JSON.stringify(BASE) };
+      return overrides.base ?? { code: 200, response: JSON.stringify({ customFields: fields, ...BASE }) };
     },
     postSync(uri, query, payload) {
       const parsed = JSON.parse(payload) as { customFields: { name: string; value: unknown }[] };
       calls.push({ method: 'POST', uri, query, payload: parsed });
-      const response = overrides.post ?? { code: 200, response: '{"idReadable":"ABC-1"}' };
+      const response = overrides.post ?? { code: 200, response: '' };
       if (response.code === 200) {
         const update = parsed.customFields[0];
         fields = (fields as { name: string }[]).map((entry) =>
           entry.name === update?.name ? { ...entry, value: update.value } : entry,
         );
       }
-      return response;
+      if (overrides.post) return response;
+      const withFields = query.fields?.includes('customFields(') ?? false;
+      return {
+        code: 200,
+        response: JSON.stringify({ idReadable: 'ABC-1', ...(withFields ? { customFields: fields } : {}) }),
+      };
     },
   };
   return { connection, calls };
@@ -96,17 +104,27 @@ describe('getIssue', () => {
       status: 200,
       body: { ...BASE, customFields: [PRIORITY, EXTERNAL_ID, STATE] },
     });
-    expect(Object.keys(result.body).at(-1)).toBe('$type');
+    expect(Object.keys(result.body)).toEqual([
+      'idReadable',
+      'summary',
+      'description',
+      'project',
+      'customFields',
+      '$type',
+    ]);
     expect(calls).toEqual([
-      { method: 'GET', uri: '/api/issues/ABC-1/customFields', query: { fields: COMPACT_PROJECTION, $top: '-1' } },
-      { method: 'GET', uri: '/api/issues/ABC-1', query: { fields: COMPACT_ISSUE_PROJECTION } },
+      {
+        method: 'GET',
+        uri: '/api/issues/ABC-1',
+        query: { fields: `${COMPACT_ISSUE_PROJECTION},customFields(${COMPACT_PROJECTION})` },
+      },
     ]);
   });
 
   it('asks YouTrack for its full output when full is set', () => {
     const { input, calls } = readInput({ full: true });
     expect(getIssue(input).body).toEqual({ ...BASE, customFields: [PRIORITY, EXTERNAL_ID, STATE] });
-    expect(calls.map((call) => call.query.fields)).toEqual([FULL_PROJECTION, ISSUE_PROJECTION]);
+    expect(calls.map((call) => call.query.fields)).toEqual([`${ISSUE_PROJECTION},customFields(${FULL_PROJECTION})`]);
   });
 
   it('returns only the named fields without the ticket attributes', () => {
@@ -184,7 +202,7 @@ describe('getIssue', () => {
     expect((getIssue(input).body as { customFields: unknown[] }).customFields).toEqual([PRIORITY, EXTERNAL_ID]);
   });
 
-  it('passes upstream errors from either call through', () => {
+  it('reports an unexpected body or a failed call as an upstream error', () => {
     const failingFields = readInput({}, youTrack({ fields: { not: 'an array' } }));
     expect(getIssue(failingFields.input)).toEqual({
       status: 502,
@@ -254,9 +272,17 @@ describe('updateIssue', () => {
     });
     expect(calls.map((call) => `${call.method} ${call.uri} ${call.query.fields}`)).toEqual([
       'GET /api/issues/ABC-1/customFields $type,name',
-      'POST /api/issues/ABC-1 idReadable',
-      `GET /api/issues/ABC-1/customFields ${FULL_PROJECTION}`,
+      `POST /api/issues/ABC-1 idReadable,customFields(${FULL_PROJECTION})`,
     ]);
+  });
+
+  it('reports a write answer without the fields as an upstream error when full is set', () => {
+    const post = { code: 200, response: '{"idReadable":"ABC-1"}' };
+    const { input } = updateInput({ full: true }, youTrack({ post }));
+    expect(updateIssue(input)).toEqual({
+      status: 502,
+      body: { error: 'upstream_error', error_description: 'technical user request returned an unexpected body' },
+    });
   });
 
   it('logs who wrote which field on which issue, without the value', () => {

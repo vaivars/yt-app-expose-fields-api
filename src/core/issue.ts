@@ -19,8 +19,23 @@ export function getIssue(input: ReadInput): Result {
   const wanted = (name: string): boolean =>
     (only === null || only.has(normalizeName(name))) && (exposed.has(normalizeName(name)) || readable(input, name));
 
-  const fields = fetchFields(upstream, input.issueId, input.full ? FULL_PROJECTION : COMPACT_PROJECTION);
-  if (!Array.isArray(fields)) return fields;
+  const projection = input.full ? FULL_PROJECTION : COMPACT_PROJECTION;
+  let attributes: IssueObject = { idReadable: input.issueId };
+  let fields: CustomFieldEntry[];
+  if (only === null) {
+    const issue = fetchIssue(
+      upstream,
+      input.issueId,
+      input.full ? ISSUE_PROJECTION : COMPACT_ISSUE_PROJECTION,
+      projection,
+    );
+    if ('status' in issue) return issue;
+    ({ attributes, customFields: fields } = issue);
+  } else {
+    const named = fetchFields(upstream, input.issueId, projection);
+    if (!Array.isArray(named)) return named;
+    fields = named;
+  }
 
   const returned = new Set<string>();
   const kept: CustomFieldEntry[] = [];
@@ -35,20 +50,10 @@ export function getIssue(input: ReadInput): Result {
     }
   }
 
-  if (only !== null) {
-    const found = new Set(kept.map((entry) => normalizeName(entryName(entry))));
-    const missing = [...only].filter(([key]) => !found.has(key)).map(([, name]) => name);
-    return issueBody({ idReadable: input.issueId }, kept, missing);
-  }
-
-  const base = callYouTrack(upstream, {
-    method: 'GET',
-    path: issuePath(input.issueId),
-    query: { fields: input.full ? ISSUE_PROJECTION : COMPACT_ISSUE_PROJECTION },
-  });
-  if (!base.ok) return { status: base.status, body: base.body };
-  if (!isObject(base.json)) return failure(upstreamError('technical user request returned an unexpected body'));
-  return issueBody(base.json, kept);
+  if (only === null) return issueBody(attributes, kept);
+  const found = new Set(kept.map((entry) => normalizeName(entryName(entry))));
+  const missing = [...only].filter(([key]) => !found.has(key)).map(([, name]) => name);
+  return issueBody(attributes, kept, missing);
 }
 
 /** update_issue: sets one exposed field as the technical user; returns a short status, or its fresh entry when `full` is set. */
@@ -75,18 +80,18 @@ export function updateIssue(input: UpdateInput): Result {
   const written = callYouTrack(upstream, {
     method: 'POST',
     path: issuePath(input.issueId),
-    query: { fields: 'idReadable' },
+    query: { fields: input.full ? withCustomFields('idReadable', FULL_PROJECTION) : 'idReadable' },
     payload: { customFields: [{ name: target.name, $type: target.$type, value: input.value }] },
   });
   if (!written.ok) return { status: written.status, body: written.body };
   input.log.info(`update_issue: ${input.actor} set "${String(target.name)}" on ${input.issueId}`);
   if (!input.full) return { status: 200, body: { idReadable: input.issueId, field: target.name, status: 'updated' } };
 
-  const fresh = fetchFields(upstream, input.issueId, FULL_PROJECTION);
-  if (!Array.isArray(fresh)) return fresh;
+  const fresh = splitCustomFields(written.json);
+  if ('status' in fresh) return fresh;
   return issueBody(
     { idReadable: input.issueId },
-    fresh.filter((entry) => normalizeName(entryName(entry)) === normalizeName(field)),
+    fresh.customFields.filter((entry) => normalizeName(entryName(entry)) === normalizeName(field)),
   );
 }
 
@@ -97,6 +102,36 @@ function upstreamFor(input: IssueContext): Upstream | Result {
   } catch (cause) {
     return error(500, 'configuration_error', (cause as Error).message);
   }
+}
+
+/** The issue's attributes and custom field entries as the technical user sees them, in one call; or the failure. */
+function fetchIssue(upstream: Upstream, issueId: string, attributes: string, fields: string): IssueWithFields | Result {
+  const response = callYouTrack(upstream, {
+    method: 'GET',
+    path: issuePath(issueId),
+    query: { fields: withCustomFields(attributes, fields) },
+  });
+  if (!response.ok) return { status: response.status, body: response.body };
+  return splitCustomFields(response.json);
+}
+
+/** An issue projection that includes its custom fields. YouTrack doesn't page nested lists, so all of them come back. */
+function withCustomFields(attributes: string, fields: string): string {
+  return `${attributes},customFields(${fields})`;
+}
+
+interface IssueWithFields {
+  attributes: IssueObject;
+  customFields: CustomFieldEntry[];
+}
+
+/** Separates the custom fields from the other attributes of an issue YouTrack returned. */
+function splitCustomFields(json: unknown): IssueWithFields | Result {
+  if (!isObject(json) || !Array.isArray(json.customFields)) {
+    return failure(upstreamError('technical user request returned an unexpected body'));
+  }
+  const { customFields, ...attributes } = json;
+  return { attributes, customFields };
 }
 
 /** The issue's custom field entries as the technical user sees them, or the failure as a Result. */

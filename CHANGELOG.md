@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/vaivars/yt-app-expose-fields-api/compare/v0.1.0...v0.2.0) (2026-10-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **settings:** pick the allowed group from YouTrack's groups and require it ([#15](https://github.com/vaivars/yt-app-expose-fields-api/issues/15))
+
+### Features
+
+* **settings:** pick the allowed group from YouTrack's groups and require it ([#15](https://github.com/vaivars/yt-app-expose-fields-api/issues/15)) ([7193fa7](https://github.com/vaivars/yt-app-expose-fields-api/commit/7193fa78acf544cff25f37500142b4c6da81607e))
+
 ## [0.1.0](https://github.com/vaivars/yt-app-expose-fields-api/compare/v0.0.1...v0.1.0) (2026-10-26)
 
 

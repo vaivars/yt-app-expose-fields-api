@@ -1,6 +1,6 @@
 {
   "name": "hidden-fields",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "YouTrack app that serves custom fields hidden from the YouTrack UI through REST and MCP",

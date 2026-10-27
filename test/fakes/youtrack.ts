@@ -71,7 +71,7 @@ export function fakeResponse() {
   };
 }
 
-/** Answers like YouTrack for one issue: customFields, the issue itself, and field updates. */
+/** Answers like YouTrack for one issue: customFields, the issue with its custom fields, and field updates. */
 export function fakeYouTrack(fields: Record<string, unknown>[], base: Record<string, unknown>) {
   let current = fields;
   return (method: string, uri: string, payload?: string) => {
@@ -79,9 +79,9 @@ export function fakeYouTrack(fields: Record<string, unknown>[], base: Record<str
       const update = (JSON.parse(payload ?? '{}') as { customFields: { name: string; value: unknown }[] })
         .customFields[0];
       current = current.map((entry) => (entry.name === update?.name ? { ...entry, value: update.value } : entry));
-      return { code: 200, response: '{"idReadable":"ABC-1","$type":"Issue"}' };
+      return { code: 200, response: JSON.stringify({ idReadable: 'ABC-1', customFields: current, $type: 'Issue' }) };
     }
     if (uri.endsWith('/customFields')) return { code: 200, response: JSON.stringify(current) };
-    return { code: 200, response: JSON.stringify(base) };
+    return { code: 200, response: JSON.stringify({ ...base, customFields: current }) };
   };
 }

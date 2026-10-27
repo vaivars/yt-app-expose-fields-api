@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { aiTool as getIssueTool } from '../../src/backend/get-issue';
 import { aiTool as updateIssueTool } from '../../src/backend/update-issue';
-import { COMPACT_PROJECTION, FULL_PROJECTION } from '../../src/core/projection';
+import {
+  COMPACT_ISSUE_PROJECTION,
+  COMPACT_PROJECTION,
+  FULL_PROJECTION,
+  ISSUE_PROJECTION,
+} from '../../src/core/projection';
 import type { AppSettings } from '../../src/core/types';
 import { issueRegistry } from '../fakes/scripting-api/entities';
 import { httpFake } from '../fakes/scripting-api/http';
@@ -47,11 +52,12 @@ describe('MCP tools', () => {
   });
 
   it('get_issue asks YouTrack for its full output only when full is true', () => {
+    const compact = `${COMPACT_ISSUE_PROJECTION},customFields(${COMPACT_PROJECTION})`;
     for (const [full, projection] of [
-      [true, FULL_PROJECTION],
-      [false, COMPACT_PROJECTION],
-      ['true', COMPACT_PROJECTION],
-      [undefined, COMPACT_PROJECTION],
+      [true, `${ISSUE_PROJECTION},customFields(${FULL_PROJECTION})`],
+      [false, compact],
+      ['true', compact],
+      [undefined, compact],
     ] as const) {
       httpFake.calls = [];
       getIssueTool.execute(context({ issueId: 'ABC-1', full }));

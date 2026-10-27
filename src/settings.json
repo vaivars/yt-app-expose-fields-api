@@ -17,9 +17,10 @@
       "x-scope": "GLOBAL"
     },
     "allowedGroup": {
-      "type": "string",
+      "type": "object",
+      "x-entity": "UserGroup",
       "title": "Allowed group",
-      "description": "Optional. Name of a group; when set, only its members can read and update the exposed fields. If no group has this name, nobody can.",
+      "description": "Only members of this group can read and update the exposed fields. Pick Registered Users to allow every signed-in user who can read the issue.",
       "x-scope": "GLOBAL"
     },
     "youtrackUrl": {
@@ -50,5 +51,5 @@
       "x-scope": "GLOBAL"
     }
   },
-  "required": ["exposedFields", "serviceToken"]
+  "required": ["exposedFields", "serviceToken", "allowedGroup"]
 }

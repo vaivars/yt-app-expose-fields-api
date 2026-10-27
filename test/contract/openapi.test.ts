@@ -76,11 +76,11 @@ describe('meta/openapi.json', () => {
           { attached: false, global: false },
         ],
       ] as const) {
-        await appSettings(null, switches);
+        await appSettings(env.everyone, switches);
         expect((await get(env.userToken, DOC)).body, JSON.stringify(rest)).toEqual(expected(rest));
       }
     } finally {
-      await appSettings(null);
+      await appSettings();
     }
   });
 });
@@ -103,12 +103,12 @@ describe('real responses match the description', () => {
 
       it('a switched-off endpoint', async () => {
         try {
-          await appSettings(null, off);
+          await appSettings(env.everyone, off);
           const response = await get<{ error: string }>(env.userToken, url);
           matches(path, 'get', response, 403);
           expect(response.body.error).toBe('disabled');
         } finally {
-          await appSettings(null);
+          await appSettings();
         }
       });
     });

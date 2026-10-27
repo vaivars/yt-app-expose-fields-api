@@ -33,6 +33,11 @@ export interface UserLike {
   isInGroup(groupName: string): boolean;
 }
 
+/** The part of a YouTrack user group the app reads. */
+export interface GroupLike {
+  name?: string | null;
+}
+
 export interface Logger {
   info(message: string): void;
   warn(message: string): void;
@@ -42,8 +47,8 @@ export interface Logger {
 export interface AppSettings {
   exposedFields?: string | null;
   serviceToken?: string | null;
-  /** Name of the group whose members may use exposed fields; blank means everyone who can read the issue. */
-  allowedGroup?: string | null;
+  /** The group whose members may use exposed fields; null when unset, and in MCP tools when the caller can't see it. */
+  allowedGroup?: GroupLike | null;
   youtrackUrl?: string | null;
   /** The interface switches; only `true` turns one off. */
   mcpDisabled?: boolean | null;

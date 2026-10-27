@@ -49,7 +49,7 @@ describe('meta httpHandler', () => {
         {
           exposedFields: 'Secret Field Zq',
           serviceToken: 'perm:secret-zq',
-          allowedGroup: 'group-zq',
+          allowedGroup: { name: 'group-zq' },
           youtrackUrl: 'https://internal-zq.example',
           mcpDisabled: true,
         },

@@ -6,7 +6,7 @@ import { getIssue } from '../core/issue';
 export const aiTool = {
   name: 'get_issue',
   description:
-    "Returns a YouTrack issue with every custom field you can read plus the fields this app exposes although they are hidden in the YouTrack UI. Pass `fields` to get only those custom fields; names it can't return are listed in `missing`. YouTrack's REST JSON shape, compact by default: each field has its name and its value's text, name, login or presentation. Pass full: true for every attribute.",
+    "Returns a YouTrack issue with every custom field you can read plus, if you're in the app's allowed group, the fields this app exposes although they are hidden in the YouTrack UI. Pass `fields` to get only those custom fields; names it can't return are listed in `missing`. YouTrack's REST JSON shape, compact by default: each field has its name and its value's text, name, login or presentation. Pass full: true for every attribute.",
   inputSchema: {
     type: 'object',
     properties: {

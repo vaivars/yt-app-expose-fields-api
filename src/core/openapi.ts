@@ -128,8 +128,9 @@ function operations(appWide: boolean): Pick<PathItem, 'get' | 'post'> {
       'x-youtrack-command': 'get-issue',
       summary: 'Get an issue, including hidden fields',
       description:
-        "The issue in YouTrack's REST shape, with every custom field you can read plus the fields this app exposes " +
-        "although YouTrack hides them. Entries come in YouTrack's field order; match them by `name`.",
+        "The issue in YouTrack's REST shape, with every custom field you can read plus, if you're in the allowed " +
+        "group, the fields this app exposes although YouTrack hides them. Entries come in YouTrack's field order; " +
+        'match them by `name`.',
       parameters: [FIELDS, FULL],
       responses: {
         '200': { description: 'The issue.', content: json(ref('Issue')) },
@@ -147,7 +148,7 @@ function operations(appWide: boolean): Pick<PathItem, 'get' | 'post'> {
       summary: 'Set one exposed field',
       description:
         'Sets one custom field on the exposed list, as the technical user, so the issue history shows that user. ' +
-        'You need permission to update the issue.',
+        'You need to be in the allowed group and have permission to update the issue.',
       parameters: [FULL],
       requestBody: { required: true, content: json(ref('UpdateRequest')) },
       responses: {

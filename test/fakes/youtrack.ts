@@ -4,9 +4,12 @@ export interface FakeUser {
   hasPermission(key: string, project?: unknown): boolean;
 }
 
+/** The allowed group in the default settings; fake users are members unless given other groups. */
+export const ALLOWED_GROUP = { name: 'Integrations' };
+
 export function fakeUser(
   login = 'jane',
-  groups: string[] = [],
+  groups: string[] = [ALLOWED_GROUP.name],
   permissions = ['READ_ISSUE', 'UPDATE_ISSUE'],
 ): FakeUser {
   return {

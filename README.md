@@ -17,7 +17,7 @@ Requires YouTrack 2026.2 or newer.
 
 The app holds a permanent token of a technical user who can see the hidden fields. In YouTrack, "Visible to" stops everyone outside the group from reading a field, and everyone but administrators from updating it, so the app does both on the caller's behalf:
 
-1. It checks that the caller can see the issue (and, for updates, may update it).
+1. It checks that the caller can see the issue and is in the allowed group (and, for updates, may update the issue).
 2. It calls YouTrack's own REST API as the technical user.
 3. It returns only what the caller may get, and updates only the exposed fields.
 
@@ -37,11 +37,13 @@ The app holds a permanent token of a technical user who can see the hidden field
    |---|---|
    | Exposed fields | Field names separated by commas. Put a name that contains a comma in double quotes: `External ID, "Fix versions, legacy"` |
    | Technical user token | The permanent token from step 2 |
-   | Allowed group | Optional: the name of a group. Only its members can read and update the exposed fields; if no group has that name, nobody can. |
+   | Allowed group | The group whose members can read and update the exposed fields. Pick Registered Users to allow every signed-in user who can read the issue |
    | YouTrack base URL | Optional: set it if YouTrack can't reach itself at the URL in issue links |
    | Disable MCP tools | Optional: refuse every call to the MCP tools |
    | Disable REST endpoints in attached projects | Optional: refuse the per-project URLs |
    | Disable app-wide REST endpoints | Optional: refuse the app-wide URLs |
+
+   The app stays off until every required setting is filled in: its URLs answer `404` and its MCP tools aren't listed. Allowed group used to be a group name you typed; YouTrack drops that value when you update the app from 0.1 or older, so pick the group again.
 
 6. **Optional: attach the app** to projects where you want the per-project URLs. The app-wide URLs and the MCP tools work without it.
 
@@ -131,7 +133,7 @@ Sets one exposed field. `value` is what YouTrack's REST API expects for the fiel
 | period | `{"presentation": "1d 2h"}` |
 | any | `null` clears the field |
 
-The response is a short status, `{"idReadable":"ABC-1","field":"LLM Session","status":"updated"}`. Add `?full=true` to the URL to get the updated field back instead, in the same shape as `get_issue` with `fields` and `full=true`. Only fields on the exposed list can be set; everything else goes through YouTrack's own API. You need permission to update the issue (and to be in **Allowed group**, if set). The change is made by the technical user, so the issue history shows that user as its author. Only members of the field's "Visible to" group see that history entry.
+The response is a short status, `{"idReadable":"ABC-1","field":"LLM Session","status":"updated"}`. Add `?full=true` to the URL to get the updated field back instead, in the same shape as `get_issue` with `fields` and `full=true`. Only fields on the exposed list can be set; everything else goes through YouTrack's own API. You need to be in **Allowed group** and have permission to update the issue. The change is made by the technical user, so the issue history shows that user as its author. Only members of the field's "Visible to" group see that history entry.
 
 ```sh
 curl -H "Authorization: Bearer $YOUTRACK_TOKEN" \
@@ -175,15 +177,15 @@ MCP can't pass `null`, so clear a field with `clear: true`. After you install or
 ## Security
 
 - **Unexposed fields stay hidden.** "Visible to" keeps a field from everyone outside its group, in the UI and when they read issues through YouTrack's API. The app never returns fields that aren't on the exposed list.
-- **Exposed fields are out of the way, not restricted.** Anyone who can read an issue can read its exposed fields through the app, and anyone who can update it can change them, unless you set **Allowed group**.
+- **Allowed group decides who gets exposed fields.** Its members can read the exposed fields of every issue they can read, and change them on every issue they can update. If you pick Registered Users, exposed fields are out of the way rather than restricted.
 - **Administrators can still write hidden fields.** YouTrack administrators can update a hidden field through YouTrack's own REST API and MCP tools, although they can't read it there. Regular users outside the "Visible to" group can do neither.
-- **Guest access.** If the guest account can read a project, its exposed fields can be read without signing in, unless you set Allowed group.
+- **Guest access.** The guest account gets exposed fields only if it's in Allowed group. Registered Users doesn't include it.
 - **Fixed attributes.** Requests run with the technical user's rights, so callers can't choose attributes: the app always asks YouTrack for the same issue attributes and custom field values, never other issues, projects, tags or user emails. Keep the technical user's rights minimal anyway.
 - **The token stays inside YouTrack.** It's stored as a secret setting, sent only to your YouTrack, and never returned or logged.
 - **Writes are narrow.** update_issue only sets fields on the exposed list, only from JSON requests (`Content-Type: application/json`, so other web pages can't submit writes with a signed-in user's session).
 - **Who made a change.** The issue history shows the technical user as the author, so the app logs the real caller for every write: `update_issue: <login> set "<field>" on <issue>` (Administration → Apps → Hidden Fields API → Logs). The value isn't logged.
 - **Workflows see the technical user.** Workflow rules, guards and "Updatable by" judge a write by the technical user, not the caller. Expose only metadata fields that no user-based rule protects, never fields like State.
-- **Attaching doesn't limit access.** The app-wide URLs and the MCP tools work in every project the technical user can read, attached or not. To limit where the app works, limit the technical user's project access, set Allowed group, or disable interfaces (see [Choose the interfaces](#choose-the-interfaces)).
+- **Attaching doesn't limit access.** The app-wide URLs and the MCP tools work in every project the technical user can read, attached or not. To limit where the app works, limit the technical user's project access, narrow Allowed group, or disable interfaces (see [Choose the interfaces](#choose-the-interfaces)).
 - **Disabled MCP tools stay listed.** YouTrack doesn't let an app hide its tools, so a disabled tool still appears in MCP clients' tool lists and refuses every call.
 
 Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
@@ -216,7 +218,8 @@ Responses that mean something specific:
 ## Troubleshooting
 
 - **An exposed field is missing.** The technical user can't read it. Check that it's in the field's Visible to group. For REST calls the app logs a warning (Administration → Apps → Hidden Fields API → Logs); MCP calls can't detect this case.
-- **`403 forbidden`.** Allowed group is set and you aren't a member, you can't update the issue, or the field isn't on the exposed list.
+- **`404` "… is restricted by the app settings" from the app-wide URLs, and no MCP tools.** A required setting is empty, usually Allowed group after an update from 0.1 or older; the per-project URLs then answer `404` "HTTP handler not found". Pick the group in the app settings.
+- **`403 forbidden`.** You aren't in Allowed group, you can't update the issue, or the field isn't on the exposed list.
 - **`403 disabled`.** That interface is disabled in the app settings (see [Choose the interfaces](#choose-the-interfaces)).
 - **`404` "HTTP handler not found by path hidden-fields/api/issue".** The app isn't attached to that issue's project. Attach it, or use the app-wide URL.
 - **`502 upstream_error`.** The technical user's call to YouTrack failed. The description says why:

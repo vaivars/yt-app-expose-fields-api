@@ -3,7 +3,7 @@ import { httpHandler as globalHandler } from '../../src/backend/global';
 import type { AppSettings, HttpResponseLike } from '../../src/core/types';
 import { issueRegistry } from './scripting-api/entities';
 import { httpFake } from './scripting-api/http';
-import { type FakeUser, fakeIssue, fakeRequest, fakeResponse, fakeUser, fakeYouTrack } from './youtrack';
+import { ALLOWED_GROUP, type FakeUser, fakeIssue, fakeRequest, fakeResponse, fakeUser, fakeYouTrack } from './youtrack';
 
 export const PRIORITY = { name: 'Priority', value: { name: 'Major' }, $type: 'SingleEnumIssueCustomField' };
 export const EXTERNAL_ID = { name: 'External ID', value: 'X-9', $type: 'SimpleIssueCustomField' };
@@ -34,7 +34,7 @@ export interface Call {
 }
 
 function defaultSettings(): AppSettings {
-  return { exposedFields: 'External ID', serviceToken: 'perm:t' };
+  return { exposedFields: 'External ID', serviceToken: 'perm:t', allowedGroup: ALLOWED_GROUP };
 }
 
 export function resetYouTrack(respond: Respond = fakeYouTrack([PRIORITY, EXTERNAL_ID], BASE)): void {
@@ -104,8 +104,9 @@ export const SCENARIOS: { name: string; method: 'GET' | 'POST'; options: CallOpt
   {
     name: 'allowed group, non-member',
     method: 'GET',
-    options: { settings: { ...defaultSettings(), allowedGroup: 'staff' } },
+    options: { settings: { ...defaultSettings(), allowedGroup: { name: 'staff' } } },
   },
+  { name: 'no allowed group', method: 'GET', options: { settings: { ...defaultSettings(), allowedGroup: null } } },
   { name: 'upstream 400', method: 'GET', options: {}, respond: UPSTREAM_400 },
   { name: 'invisible', method: 'GET', options: { issue: fakeIssue({ visible: false }) } },
   { name: 'no base URL', method: 'GET', options: { issue: NO_BASE_URL } },
@@ -117,12 +118,17 @@ export const SCENARIOS: { name: string; method: 'GET' | 'POST'; options: CallOpt
   {
     name: 'no update permission',
     method: 'POST',
-    options: { body: UPDATE, user: fakeUser('rita', [], ['READ_ISSUE']) },
+    options: { body: UPDATE, user: fakeUser('rita', [ALLOWED_GROUP.name], ['READ_ISSUE']) },
   },
   {
     name: 'allowed group, non-member',
     method: 'POST',
-    options: { body: UPDATE, settings: { ...defaultSettings(), allowedGroup: 'staff' } },
+    options: { body: UPDATE, settings: { ...defaultSettings(), allowedGroup: { name: 'staff' } } },
+  },
+  {
+    name: 'no allowed group',
+    method: 'POST',
+    options: { body: UPDATE, settings: { ...defaultSettings(), allowedGroup: null } },
   },
   {
     name: 'field not on issue',

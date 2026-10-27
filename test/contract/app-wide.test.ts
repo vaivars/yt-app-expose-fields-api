@@ -182,13 +182,13 @@ describe('a private field', () => {
 
 describe('switches', () => {
   afterEach(async () => {
-    await appSettings(null);
+    await appSettings();
   });
 
   it('turn each interface off on its own', async () => {
     const keys: Switch[] = ['mcpDisabled', 'attachedRestDisabled', 'globalRestDisabled'];
     for (const key of keys) {
-      await appSettings(null, { [key]: true });
+      await appSettings(env.everyone, { [key]: true });
       const attached = await get<{ error?: string }>(env.userToken, APP);
       const global = await get<{ error?: string }>(env.userToken, GLOBAL);
       const tool = await callToolRaw(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue });

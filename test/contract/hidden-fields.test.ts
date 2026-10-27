@@ -224,7 +224,7 @@ describe('allowed group', () => {
     await appSettings(env.group);
   });
   afterAll(async () => {
-    await appSettings(null);
+    await appSettings();
   });
 
   it('gives non-members only their own fields, over REST and MCP', async () => {
@@ -246,6 +246,29 @@ describe('allowed group', () => {
     expect(tool.isError).toBe(true);
     expect(tool.text).toContain('forbidden');
     expect(await techValue(WRITABLE)).toBe(WRITABLE_FIXTURE);
+  });
+});
+
+describe('no allowed group', () => {
+  beforeAll(async () => {
+    await appSettings(null);
+  });
+  afterAll(async () => {
+    await appSettings();
+  });
+
+  it('keeps the app off, over REST and MCP', async () => {
+    const attached = await get<{ error_description: string }>(env.userToken, APP);
+    expect(attached.status).toBe(404);
+    expect(attached.body.error_description).toContain('HTTP handler not found');
+    const global = await get<{ error_description: string }>(
+      env.userToken,
+      `/api/extensionEndpoints/hidden-fields/global/issue?issueId=${env.issue}`,
+    );
+    expect(global.status).toBe(404);
+    expect(global.body.error_description).toContain('restricted by the app settings');
+    const tool = await callToolRaw(env.userToken, 'hidden_fields_get_issue', { issueId: env.issue });
+    expect(tool.isError).toBe(true);
   });
 });
 

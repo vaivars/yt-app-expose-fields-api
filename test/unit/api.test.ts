@@ -7,14 +7,14 @@ import {
   ISSUE_PROJECTION,
 } from '../../src/core/projection';
 import { httpFake } from '../fakes/scripting-api/http';
-import { fakeIssue, fakeRequest, fakeResponse, fakeUser, fakeYouTrack } from '../fakes/youtrack';
+import { ALLOWED_GROUP, fakeIssue, fakeRequest, fakeResponse, fakeUser, fakeYouTrack } from '../fakes/youtrack';
 
 const PRIORITY = { name: 'Priority', value: { name: 'Major' }, $type: 'SingleEnumIssueCustomField' };
 const EXTERNAL_ID = { name: 'External ID', value: 'X-9', $type: 'SimpleIssueCustomField' };
 const BASE = { idReadable: 'ABC-1', summary: 'S', $type: 'Issue' };
 const COMPACT = `${COMPACT_ISSUE_PROJECTION},customFields(${COMPACT_PROJECTION})`;
 const FULL = `${ISSUE_PROJECTION},customFields(${FULL_PROJECTION})`;
-const SETTINGS = { exposedFields: 'External ID', serviceToken: 'perm:t' };
+const SETTINGS = { exposedFields: 'External ID', serviceToken: 'perm:t', allowedGroup: ALLOWED_GROUP };
 
 function call(
   method: string,
@@ -159,7 +159,7 @@ describe('httpHandler', () => {
   it('POST refuses callers without the update permission', () => {
     const response = call('POST', {
       body: '{"field":"External ID","value":"x"}',
-      user: fakeUser('jane', [], ['READ_ISSUE']),
+      user: fakeUser('jane', [ALLOWED_GROUP.name], ['READ_ISSUE']),
     });
     expect(response.code).toBe(403);
     expect(httpFake.calls).toEqual([]);

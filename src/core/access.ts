@@ -1,12 +1,10 @@
-import type { UserLike } from './types';
+import type { GroupLike, UserLike } from './types';
 
 /**
- * Whether the user may read exposed fields: always when no group name is configured, otherwise only members.
- * The group is configured by name because MCP tools see entity settings with the caller's permissions, where a
- * non-member would see no group at all. A name that matches no group denies everyone.
+ * Whether the user may use exposed fields: only members of the allowed group, and nobody while no group is set. MCP
+ * tools see the group with the caller's permissions, so a caller who can't see it gets no group and is refused too.
  */
-export function canUseExposedFields(allowedGroup: string | null | undefined, user: UserLike): boolean {
-  const name = allowedGroup?.trim() ?? '';
-  if (name === '') return true;
-  return user.isInGroup(name);
+export function canUseExposedFields(allowedGroup: GroupLike | null | undefined, user: UserLike): boolean {
+  const name = allowedGroup?.name;
+  return typeof name === 'string' && name !== '' && user.isInGroup(name);
 }

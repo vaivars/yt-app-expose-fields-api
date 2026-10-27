@@ -18,6 +18,8 @@ export const contractEnv = {
   project: process.env.YT_CONTRACT_PROJECT ?? 'HFT',
   issue: process.env.YT_CONTRACT_ISSUE ?? 'HFT-1',
   group: process.env.YT_CONTRACT_GROUP ?? 'hidden-fields-readers',
+  /** YouTrack's group of every signed-in user; the Allowed group unless a test picks another. */
+  everyone: 'Registered Users',
   exposed: ['HF External ID', 'HF Sync State'],
   unexposed: 'HF Internal Note',
 };

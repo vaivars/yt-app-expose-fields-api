@@ -7,7 +7,7 @@ import type { AppSettings } from '../../src/core/types';
 import { callAttached, callGlobal, resetYouTrack } from '../fakes/handlers';
 import { issueRegistry } from '../fakes/scripting-api/entities';
 import { httpFake } from '../fakes/scripting-api/http';
-import { fakeIssue, fakeUser } from '../fakes/youtrack';
+import { ALLOWED_GROUP, fakeIssue, fakeUser } from '../fakes/youtrack';
 
 const TITLES: Record<Switch, string> = {
   mcpDisabled: 'Disable MCP tools',
@@ -19,7 +19,7 @@ const UPDATE = '{"field":"External ID","value":"X"}';
 const MCP_OFF = 'disabled: The MCP tools are disabled in the app settings';
 
 function settings(overrides: AppSettings = {}): AppSettings {
-  return { exposedFields: 'External ID', serviceToken: 'perm:t', ...overrides };
+  return { exposedFields: 'External ID', serviceToken: 'perm:t', allowedGroup: ALLOWED_GROUP, ...overrides };
 }
 
 function toolContext(issueId: string, overrides: AppSettings = {}) {
@@ -58,8 +58,8 @@ describe('switches', () => {
         'x-scope': 'GLOBAL',
         title: TITLES[key],
       });
+      expect(schema.required, key).not.toContain(key);
     }
-    expect(schema.required).toEqual(['exposedFields', 'serviceToken']);
   });
 
   it('answers the same 403 for existing, unknown and missing issues', () => {

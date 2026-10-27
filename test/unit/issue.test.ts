@@ -14,6 +14,13 @@ const NOTE = { $type: 'SimpleIssueCustomField', id: '3', name: 'Internal Note', 
 const STATE = { $type: 'StateIssueCustomField', id: '4', name: 'State', value: { name: 'Open' } };
 const FIELDS = [PRIORITY, EXTERNAL_ID, NOTE, STATE];
 const BASE = { idReadable: 'ABC-1', summary: 'S', description: null, $type: 'Issue', project: { shortName: 'ABC' } };
+const SETTINGS = {
+  exposedFields: 'External ID',
+  serviceToken: 'perm:secret-token',
+  allowedGroup: { name: 'Integrations' },
+};
+const MEMBER = { isInGroup: (name: string) => name === 'Integrations' };
+const NON_MEMBER = { isInGroup: () => false };
 
 interface Call {
   method: string;
@@ -64,8 +71,8 @@ function readInput(overrides: Partial<ReadInput> = {}, fake = youTrack()) {
   const input: ReadInput = {
     issueId: 'ABC-1',
     issueUrl: 'https://yt.example/issue/ABC-1',
-    settings: { exposedFields: 'External ID', serviceToken: 'perm:secret-token' },
-    user: { isInGroup: () => false },
+    settings: SETTINGS,
+    user: MEMBER,
     connect: (baseUrl) => {
       connected.push(baseUrl);
       return fake.connection;
@@ -83,8 +90,8 @@ function updateInput(overrides: Partial<UpdateInput> = {}, fake = youTrack()) {
   const input: UpdateInput = {
     issueId: 'ABC-1',
     issueUrl: 'https://yt.example/issue/ABC-1',
-    settings: { exposedFields: 'External ID', serviceToken: 'perm:secret-token' },
-    user: { isInGroup: () => false },
+    settings: SETTINGS,
+    user: MEMBER,
     connect: () => fake.connection,
     field: 'External ID',
     value: 'NEW-1',
@@ -173,23 +180,26 @@ describe('getIssue', () => {
   });
 
   it('matches exposed names from the setting trimmed and case-insensitively', () => {
-    const { input } = readInput({ settings: { exposedFields: '  external id ', serviceToken: 't' } });
+    const { input } = readInput({ settings: { ...SETTINGS, exposedFields: '  external id ' } });
     expect((getIssue(input).body as { customFields: unknown[] }).customFields).toEqual([PRIORITY, EXTERNAL_ID, STATE]);
   });
 
   it('gives non-members of the allowed group only the fields they can read', () => {
-    const { input } = readInput({
-      settings: { exposedFields: 'External ID', serviceToken: 't', allowedGroup: 'Integrations' },
-    });
+    const { input } = readInput({ user: NON_MEMBER });
     expect((getIssue(input).body as { customFields: unknown[] }).customFields).toEqual([PRIORITY, STATE]);
   });
 
   it('gives members of the allowed group the exposed fields', () => {
-    const { input } = readInput({
-      user: { isInGroup: (name) => name === 'Integrations' },
-      settings: { exposedFields: 'External ID', serviceToken: 't', allowedGroup: 'Integrations' },
-    });
+    const { input } = readInput({ user: MEMBER });
     expect((getIssue(input).body as { customFields: unknown[] }).customFields).toEqual([PRIORITY, EXTERNAL_ID, STATE]);
+  });
+
+  it('gives everyone only the fields they can read when no allowed group is set', () => {
+    const { input } = readInput({
+      user: { isInGroup: () => true },
+      settings: { exposedFields: 'External ID', serviceToken: 't', allowedGroup: null },
+    });
+    expect((getIssue(input).body as { customFields: unknown[] }).customFields).toEqual([PRIORITY, STATE]);
   });
 
   it('treats a field whose readability check throws as unreadable', () => {
@@ -330,8 +340,9 @@ describe('updateIssue', () => {
 
   it('refuses non-members of the allowed group, callers who cannot update the issue, and non-exposed fields', () => {
     const cases: [Partial<UpdateInput>, string][] = [
+      [{ user: NON_MEMBER }, 'You are not allowed to update the exposed fields of this issue'],
       [
-        { settings: { exposedFields: 'External ID', serviceToken: 't', allowedGroup: 'Integrations' } },
+        { user: { isInGroup: () => true }, settings: { exposedFields: 'External ID', serviceToken: 't' } },
         'You are not allowed to update the exposed fields of this issue',
       ],
       [{ canUpdate: () => false }, 'You are not allowed to update this issue'],

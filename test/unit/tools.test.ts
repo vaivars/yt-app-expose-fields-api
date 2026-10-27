@@ -10,7 +10,7 @@ import {
 import type { AppSettings } from '../../src/core/types';
 import { issueRegistry } from '../fakes/scripting-api/entities';
 import { httpFake } from '../fakes/scripting-api/http';
-import { fakeIssue, fakeUser, fakeYouTrack } from '../fakes/youtrack';
+import { ALLOWED_GROUP, fakeIssue, fakeUser, fakeYouTrack } from '../fakes/youtrack';
 
 const PRIORITY = { name: 'Priority', value: { name: 'Major' }, $type: 'SingleEnumIssueCustomField' };
 const EXTERNAL_ID = { name: 'External ID', value: 'X-9', $type: 'SimpleIssueCustomField' };
@@ -20,7 +20,7 @@ function context(args: Record<string, unknown>, settings: AppSettings = {}, user
   return {
     arguments: args,
     currentUser: user as never,
-    settings: { exposedFields: 'External ID', serviceToken: 'perm:t', ...settings },
+    settings: { exposedFields: 'External ID', serviceToken: 'perm:t', allowedGroup: ALLOWED_GROUP, ...settings },
   };
 }
 
@@ -101,7 +101,7 @@ describe('MCP tools', () => {
   });
 
   it('update_issue refuses callers without the update permission', () => {
-    const reader = fakeUser('rita', [], ['READ_ISSUE']);
+    const reader = fakeUser('rita', [ALLOWED_GROUP.name], ['READ_ISSUE']);
     const ctx = context({ issueId: 'ABC-1', field: 'External ID', value: 'x' }, {}, reader);
     expect(() => updateIssueTool.execute(ctx)).toThrow('forbidden: You are not allowed to update this issue');
     expect(httpFake.calls).toEqual([]);

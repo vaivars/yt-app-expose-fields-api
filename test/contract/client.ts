@@ -57,11 +57,12 @@ export function cli(...args: string[]): void {
 }
 
 /**
- * Writes the app's global settings over REST (no CLI, so tokens never reach argv); pass a group name to restrict, and
- * switches to turn interfaces off. Switches left out aren't written, as for an app saved before they existed.
+ * Writes the app's global settings over REST (no CLI, so tokens never reach argv). `allowedGroup` names the group whose
+ * members may use the exposed fields; null leaves it unset, which turns the app off. Switches left out aren't written,
+ * as for an app saved before they existed.
  */
 export async function appSettings(
-  allowedGroup: string | null = null,
+  allowedGroup: string | null = env.everyone,
   switches: Partial<Record<Switch, boolean>> = {},
 ): Promise<void> {
   const settings: Record<string, unknown> = {
@@ -70,7 +71,7 @@ export async function appSettings(
     youtrackUrl: env.selfUrl,
     ...switches,
   };
-  if (allowedGroup) settings.allowedGroup = allowedGroup;
+  if (allowedGroup !== null) settings.allowedGroup = { id: await groupId(allowedGroup) };
   const apps = await get<{ id: string; name: string }[]>(env.adminToken, '/api/admin/apps?$top=-1', 'id,name');
   const app = apps.body.find((candidate) => candidate.name === 'hidden-fields');
   if (!app) throw new Error('the hidden-fields app is not installed');
@@ -78,6 +79,13 @@ export async function appSettings(
     globalSettings: JSON.stringify(settings),
   });
   if (status !== 200) throw new Error(`could not write the app settings: HTTP ${status}`);
+}
+
+async function groupId(name: string): Promise<string> {
+  const { body } = await get<{ id: string; name: string }[]>(env.adminToken, '/api/groups?$top=-1', 'id,name');
+  const group = body.find((candidate) => candidate.name === name);
+  if (!group) throw new Error(`no group named ${name}`);
+  return group.id;
 }
 
 /** Calls one of the app's MCP tools as the token's user with a fresh connection; returns the raw text result. */

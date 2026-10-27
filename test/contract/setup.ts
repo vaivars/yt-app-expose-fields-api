@@ -9,5 +9,5 @@ export default async function setup(): Promise<void> {
   } catch {
     // already attached
   }
-  await appSettings(null);
+  await appSettings();
 }
